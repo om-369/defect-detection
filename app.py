@@ -5,113 +5,237 @@ import time
 import logging
 from typing import Dict, Any, Tuple
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_file, session, redirect, url_for
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 import tensorflow as tf
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-
-from src.models.model import create_model, compile_model
-from src.data.preprocessing import load_image, resize_image, normalize_image
-from config import IMG_SIZE
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from prometheus_client import Counter, Histogram, start_http_server, generate_latest, CONTENT_TYPE_LATEST
+from pythonjsonlogger import jsonlogger
 
 # Initialize Flask app
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key')  # Change this in production
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# Configure logging
+logger = logging.getLogger()
+logHandler = logging.StreamHandler()
+formatter = jsonlogger.JsonFormatter()
+logHandler.setFormatter(formatter)
+logger.addHandler(logHandler)
+logger.setLevel(logging.INFO)
 
 # Prometheus metrics
-PREDICTION_REQUEST_COUNT = Counter(
-    'prediction_requests_total',
-    'Total number of prediction requests'
-)
-PREDICTION_LATENCY = Histogram(
-    'prediction_latency_seconds',
-    'Time spent processing prediction requests'
-)
-ERROR_COUNT = Counter(
-    'error_count_total',
-    'Total number of errors',
-    ['error_type']
-)
+PREDICTION_REQUEST_COUNT = Counter('prediction_requests_total', 'Total prediction requests')
+PREDICTION_LATENCY = Histogram('prediction_latency_seconds', 'Prediction latency in seconds')
+PREDICTION_ERROR_COUNT = Counter('prediction_errors_total', 'Total prediction errors')
+ERROR_COUNT = Counter('error_count_total', 'Total number of errors', ['error_type'])
 
-# Load model
-try:
-    model = create_model()
-    model = compile_model(model)
-    model.load_weights('models/latest.h5')
-    logger.info("Model loaded successfully")
-except Exception as e:
-    logger.error(f"Error loading model: {str(e)}")
-    model = None
-    ERROR_COUNT.labels(error_type='model_load').inc()
+# Global variables
+model = None
+model_lock = threading.Lock()
+prediction_queue = queue.Queue()
+
+# User class for authentication
+class User(UserMixin):
+    def __init__(self, id, username, password_hash):
+        self.id = id
+        self.username = username
+        self.password_hash = password_hash
+
+# Mock user database (replace with real database in production)
+users = {
+    'admin': User('1', 'admin', generate_password_hash('admin'))
+}
+
+@login_manager.user_loader
+def load_user(user_id):
+    for user in users.values():
+        if user.id == user_id:
+            return user
+    return None
+
+def load_model_safe():
+    """Safely load the model with error handling."""
+    global model
+    try:
+        with model_lock:
+            model = tf.keras.models.load_model('models/model.h5')
+        logger.info("Model loaded successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Error loading model: {str(e)}")
+        return False
+
+def process_image(image_data):
+    """Process image data for prediction."""
+    try:
+        img = tf.image.decode_image(image_data)
+        img = tf.image.resize(img, (224, 224))
+        img = tf.expand_dims(img, 0)
+        return img
+    except Exception as e:
+        logger.error(f"Error processing image: {str(e)}")
+        raise
+
+def save_prediction_history(image_path, result):
+    """Save prediction results to history."""
+    history_dir = Path('monitoring/predictions')
+    history_dir.mkdir(parents=True, exist_ok=True)
+    
+    history_file = history_dir / 'history.json'
+    history = []
+    
+    if history_file.exists():
+        with open(history_file, 'r') as f:
+            history = json.load(f)
+    
+    history.append({
+        'timestamp': datetime.utcnow().isoformat(),
+        'image_path': str(image_path),
+        'result': result
+    })
+    
+    with open(history_file, 'w') as f:
+        json.dump(history, f, indent=2)
+
+@app.route('/')
+def index():
+    """Render the main page."""
+    return render_template('index.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Handle user login."""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        user = users.get(username)
+        if user and check_password_hash(user.password_hash, password):
+            login_user(user)
+            return redirect(url_for('index'))
+        
+        return 'Invalid username or password'
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    """Handle user logout."""
+    logout_user()
+    return redirect(url_for('index'))
+
+@app.route('/predict', methods=['POST'])
+@login_required
+def predict():
+    """Handle prediction requests."""
+    start_time = time.time()
+    PREDICTION_REQUEST_COUNT.inc()
+    
+    try:
+        if 'image' not in request.files:
+            raise ValueError("No image file provided")
+        
+        image_file = request.files['image']
+        image_data = image_file.read()
+        
+        # Process image
+        img = process_image(image_data)
+        
+        # Make prediction
+        with model_lock:
+            if model is None:
+                if not load_model_safe():
+                    raise ValueError("Model not available")
+            prediction = model.predict(img)
+        
+        # Process results
+        defect_probability = float(prediction[0][0])
+        defect_detected = defect_probability > 0.5
+        processing_time = time.time() - start_time
+        
+        result = {
+            'defect_detected': defect_detected,
+            'defect_probability': defect_probability,
+            'processing_time': processing_time
+        }
+        
+        # Save to history
+        save_prediction_history(image_file.filename, result)
+        
+        PREDICTION_LATENCY.observe(processing_time)
+        return jsonify(result)
+    
+    except Exception as e:
+        PREDICTION_ERROR_COUNT.inc()
+        logger.error(f"Prediction error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/batch', methods=['GET'])
+@login_required
+def batch():
+    """Render batch processing page."""
+    return render_template('batch.html')
+
+@app.route('/history')
+@login_required
+def history():
+    """Render history page."""
+    return render_template('history.html')
+
+@app.route('/api/history')
+@login_required
+def get_history():
+    """Get prediction history."""
+    try:
+        history_file = Path('monitoring/predictions/history.json')
+        if not history_file.exists():
+            return jsonify([])
+        
+        with open(history_file, 'r') as f:
+            history = json.load(f)
+        return jsonify(history)
+    except Exception as e:
+        logger.error(f"Error loading history: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    """Render monitoring dashboard."""
+    return render_template('dashboard.html')
+
+@app.route('/health')
+def health():
+    """Health check endpoint."""
+    return jsonify({
+        'status': 'healthy' if model is not None else 'degraded',
+        'timestamp': datetime.utcnow().isoformat()
+    })
+
+@app.route('/reload-model', methods=['POST'])
+@login_required
+def reload_model():
+    """Endpoint to reload the model."""
+    success = load_model_safe()
+    return jsonify({
+        'success': success,
+        'message': 'Model reloaded successfully' if success else 'Failed to reload model'
+    })
 
 @app.route('/metrics', methods=['GET'])
 def metrics() -> Tuple[bytes, int, Dict[str, str]]:
     """Endpoint for Prometheus metrics."""
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
-
-@app.route('/health', methods=['GET'])
-def health_check() -> Tuple[Dict[str, Any], int]:
-    """Health check endpoint."""
-    health_status = {
-        'status': 'healthy',
-        'model_loaded': model is not None,
-        'timestamp': datetime.utcnow().isoformat(),
-        'version': os.environ.get('VERSION', 'dev')
-    }
-    return jsonify(health_status), 200
-
-@app.route('/predict', methods=['POST'])
-def predict() -> Tuple[Dict[str, Any], int]:
-    """Endpoint for defect detection predictions."""
-    PREDICTION_REQUEST_COUNT.inc()
-    start_time = time.time()
-
-    try:
-        if model is None:
-            ERROR_COUNT.labels(error_type='model_not_loaded').inc()
-            return jsonify({'error': 'Model not loaded'}), 503
-
-        if 'image' not in request.files:
-            ERROR_COUNT.labels(error_type='no_image').inc()
-            return jsonify({'error': 'No image provided'}), 400
-
-        # Load and preprocess image
-        image_file = request.files['image']
-        image = load_image(image_file)
-        image = resize_image(image, IMG_SIZE)
-        image = normalize_image(image)
-        image = np.expand_dims(image, axis=0)
-
-        # Make prediction
-        prediction = model.predict(image)
-        probability = float(prediction[0, 0])
-        
-        # Format response
-        response = {
-            'defect_probability': probability,
-            'defect_detected': probability > 0.5,
-            'processing_time': time.time() - start_time,
-            'timestamp': datetime.utcnow().isoformat()
-        }
-        
-        logger.info(f"Prediction made successfully: {response}")
-        PREDICTION_LATENCY.observe(time.time() - start_time)
-        return jsonify(response), 200
-
-    except Exception as e:
-        ERROR_COUNT.labels(error_type='prediction_error').inc()
-        logger.error(f"Error during prediction: {str(e)}")
-        return jsonify({
-            'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
-        }), 500
 
 @app.route('/status', methods=['GET'])
 def status() -> Tuple[Dict[str, Any], int]:
@@ -132,6 +256,7 @@ def status() -> Tuple[Dict[str, Any], int]:
     return jsonify(status_info), 200
 
 @app.route("/batch-predict", methods=["POST"])
+@login_required
 def batch_predict():
     """Endpoint for making predictions on multiple images."""
     # Check if images were uploaded
@@ -180,18 +305,6 @@ def batch_predict():
 
     return jsonify({"results": results}), 200
 
-@app.errorhandler(404)
-def not_found(error: Any) -> Tuple[Dict[str, str], int]:
-    """Handle 404 errors."""
-    ERROR_COUNT.labels(error_type='not_found').inc()
-    return jsonify({'error': 'Not found'}), 404
-
-@app.errorhandler(500)
-def internal_error(error: Any) -> Tuple[Dict[str, str], int]:
-    """Handle 500 errors."""
-    ERROR_COUNT.labels(error_type='internal_error').inc()
-    return jsonify({'error': 'Internal server error'}), 500
-
 def allowed_file(filename):
     """Check if file has an allowed extension."""
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
@@ -202,5 +315,12 @@ def secure_filename(filename):
     return filename.replace(" ", "_").replace("/", "_").replace("\\", "_")
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
+    # Start Prometheus metrics server
+    start_http_server(8000)
+    
+    # Load the model
+    load_model_safe()
+    
+    # Run the Flask app
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)

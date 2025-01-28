@@ -1,5 +1,7 @@
 # Defect Detection System
 
+[![CI/CD Pipeline](https://github.com/om-369/defect-detection/actions/workflows/ci.yml/badge.svg)](https://github.com/om-369/defect-detection/actions/workflows/ci.yml)
+
 An AI-powered system for detecting manufacturing defects using deep learning and computer vision.
 
 ## Features

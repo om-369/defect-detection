@@ -7,11 +7,12 @@ on:
     branches: [ main, develop ]
 
 env:
-  PYTHON_VERSION: '3.9'
+  PYTHON_VERSION: '3.12'  # Updated to match our local environment
   DOCKER_IMAGE: defect-detection
-  GCP_PROJECT: defect-detection-project
+  GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: us-central1
   SERVICE_NAME: defect-detection-service
+  SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
 
 jobs:
   quality:
@@ -62,6 +63,8 @@ jobs:
       - name: Run tests with coverage
         run: |
           pytest tests/ --cov=src --cov-report=xml
+        env:
+          SECRET_KEY: ${{ env.SECRET_KEY }}
           
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -73,7 +76,7 @@ jobs:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     steps:
       - uses: actions/checkout@v3
       
@@ -94,6 +97,8 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:latest
             ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          build-args: |
+            SECRET_KEY=${{ env.SECRET_KEY }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:buildcache,mode=max
 
@@ -102,6 +107,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v3
       
@@ -112,11 +119,14 @@ jobs:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           
       - name: Deploy to Cloud Run
+        id: deploy
         uses: google-github-actions/deploy-cloudrun@v1
         with:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.GCP_REGION }}
           image: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+          env_vars: |
+            SECRET_KEY=${{ env.SECRET_KEY }}
           
       - name: Show Output URL
         run: echo ${{ steps.deploy.outputs.url }}

@@ -1,0 +1,42 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Test coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Data and models (these should be mounted or downloaded separately)
+data/*
+!data/labeled/
+models/*
+!models/.gitkeep
+
+# Logs
+logs/
+*.log
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Temporary files
+*.swp
+*.swo
+*~

@@ -1,0 +1,16 @@
+[Unit]
+Description=Defect Detection Health Check Service
+After=network.target
+
+[Service]
+Type=simple
+User=defectapp
+Environment=SERVICE_URL=http://localhost:8080
+Environment=CHECK_INTERVAL=60
+WorkingDirectory=/opt/defect-detection
+ExecStart=/opt/defect-detection/venv/bin/python scripts/health_check.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

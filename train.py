@@ -8,9 +8,11 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
 # Add project root to path
-sys.path.append(str(Path(__file__).resolve().parent))
-from config import (BATCH_SIZE, DATA_DIR, MODEL_CONFIG, TEST_SPLIT,
-                    TRAIN_SPLIT, VAL_SPLIT)
+project_root = str(Path(__file__).resolve().parent)
+sys.path.insert(0, project_root)
+
+from src.config import (BATCH_SIZE, DATA_DIR, MODEL_CONFIG, TEST_SPLIT,
+                        TRAIN_SPLIT, VAL_SPLIT)
 from src.data.preprocessing import create_dataset
 from src.models.model import compile_model, create_model, get_callbacks
 from src.utils.visualization import plot_training_history
@@ -59,58 +61,53 @@ def split_data(image_paths, labels):
 
 
 def train_model():
-    """Main training function."""
-    print("Loading and preparing data...")
-
-    # Load and split data
+    """Train the defect detection model."""
+    print("Loading data...")
     image_paths, labels = load_data()
+
+    print("Splitting data...")
     (train_paths, train_labels), (val_paths, val_labels), (test_paths, test_labels) = (
         split_data(image_paths, labels)
     )
 
-    print(f"\nDataset statistics:")
-    print(f"Training samples: {len(train_paths)}")
+    print(f"Train samples: {len(train_paths)}")
     print(f"Validation samples: {len(val_paths)}")
     print(f"Test samples: {len(test_paths)}")
 
-    # Create datasets with smaller batch size for small dataset
+    print("Creating datasets...")
     train_dataset = create_dataset(
-        train_paths, train_labels, batch_size=4, augment=True
+        train_paths, train_labels, batch_size=BATCH_SIZE, augment=True
     )
-    val_dataset = create_dataset(val_paths, val_labels, batch_size=4)
-    test_dataset = create_dataset(test_paths, test_labels, batch_size=4)
+    val_dataset = create_dataset(
+        val_paths, val_labels, batch_size=BATCH_SIZE, augment=False
+    )
+    test_dataset = create_dataset(
+        test_paths, test_labels, batch_size=BATCH_SIZE, augment=False
+    )
 
-    print("\nCreating and compiling model...")
-    # Create and compile model
+    print("Creating model...")
     model = create_model()
     model = compile_model(model)
 
-    # Get callbacks
+    print("Training model...")
     callbacks = get_callbacks()
-
-    print("\nStarting training...")
-    # Train model with class weights to handle imbalance
     history = model.fit(
         train_dataset,
-        epochs=MODEL_CONFIG["epochs"],
         validation_data=val_dataset,
+        epochs=MODEL_CONFIG["epochs"],
         callbacks=callbacks,
         verbose=1,
     )
 
-    # Evaluate model
-    print("\nEvaluating model on test set...")
-    test_results = model.evaluate(test_dataset, verbose=1)
-    print("\nTest Results:")
-    for metric_name, value in zip(model.metrics_names, test_results):
-        print(f"{metric_name}: {value:.4f}")
+    print("Saving model...")
+    model.save("models/latest")
 
-    # Plot training history
+    print("Plotting training history...")
     plot_training_history(history)
 
-    # Save final model
-    model.save("models/final_model.h5")
-    print("\nTraining completed! Model saved as 'models/final_model.h5'")
+    print("Evaluating model...")
+    test_loss, test_accuracy = model.evaluate(test_dataset, verbose=1)
+    print(f"\nTest accuracy: {test_accuracy:.4f}")
 
 
 if __name__ == "__main__":

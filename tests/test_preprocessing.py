@@ -12,7 +12,7 @@ from PIL import Image
 project_root = str(Path(__file__).resolve().parent.parent)
 sys.path.insert(0, project_root)
 
-from config import IMG_SIZE
+from src.config import IMG_SIZE
 from src.data.preprocessing import preprocess_image, resize_image
 
 
@@ -61,7 +61,9 @@ def test_dataset_creation():
 
     # Create dataset
     batch_size = 2
-    dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels)).batch(batch_size)
+    dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels)).batch(
+        batch_size
+    )
 
     # Verify dataset properties
     assert isinstance(dataset, tf.data.Dataset)
@@ -109,7 +111,9 @@ def test_dataset_different_batch_sizes(batch_size, num_samples):
     image_paths = list(map(str, (test_dir / "defect").glob("*.jpg")))[:num_samples]
     labels = [1] * len(image_paths)
 
-    dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels)).batch(batch_size)
+    dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels)).batch(
+        batch_size
+    )
 
     for images, batch_labels in dataset:
         assert images.shape[0] <= batch_size  # Last batch might be smaller

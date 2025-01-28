@@ -55,3 +55,7 @@ src/
 .coverage
 coverage.xml
 htmlcov/
+
+# Secrets setup
+secrets_setup.txt
+GoogleCloudSDKInstaller.exe

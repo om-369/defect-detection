@@ -16,10 +16,12 @@ from flask import (Flask, jsonify, redirect, render_template, request,
                    send_file, session, url_for)
 from flask_login import (LoginManager, UserMixin, current_user, login_required,
                          login_user, logout_user)
+from google.cloud import storage
 from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Histogram,
                                generate_latest, start_http_server)
 from pythonjsonlogger import jsonlogger
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -49,11 +51,70 @@ PREDICTION_LATENCY = Histogram(
 )
 PREDICTION_ERROR_COUNT = Counter("prediction_errors_total", "Total prediction errors")
 ERROR_COUNT = Counter("error_count_total", "Total number of errors", ["error_type"])
+MODEL_DOWNLOAD_COUNT = Counter("model_downloads_total", "Total model downloads")
+MODEL_DOWNLOAD_ERROR_COUNT = Counter("model_download_errors_total", "Total model download errors")
 
 # Global variables
 model = None
 model_lock = threading.Lock()
 prediction_queue = queue.Queue()
+storage_client = storage.Client()
+
+def download_model_from_gcs():
+    """Download the latest model from GCS."""
+    try:
+        bucket_name = os.environ.get("MODEL_BUCKET")
+        if not bucket_name:
+            logger.error("MODEL_BUCKET environment variable not set")
+            return False
+
+        bucket = storage_client.bucket(bucket_name)
+        model_blob = None
+        latest_model = None
+        latest_time = 0
+
+        # Find the latest model
+        for blob in bucket.list_blobs(prefix="models/"):
+            if blob.name.endswith(".h5"):
+                if blob.updated.timestamp() > latest_time:
+                    latest_time = blob.updated.timestamp()
+                    latest_model = blob.name
+                    model_blob = blob
+
+        if not model_blob:
+            logger.error("No model found in GCS bucket")
+            return False
+
+        # Create models directory if it doesn't exist
+        os.makedirs("models", exist_ok=True)
+        model_path = os.path.join("models", "model.h5")
+
+        # Download the model
+        model_blob.download_to_filename(model_path)
+        MODEL_DOWNLOAD_COUNT.inc()
+        logger.info(f"Downloaded model from GCS: {latest_model}")
+        return True
+
+    except Exception as e:
+        MODEL_DOWNLOAD_ERROR_COUNT.inc()
+        logger.error(f"Error downloading model from GCS: {str(e)}")
+        return False
+
+
+def load_model_safe():
+    """Safely load the model with error handling."""
+    global model
+    try:
+        with model_lock:
+            if not os.path.exists("models/model.h5"):
+                if not download_model_from_gcs():
+                    return False
+            model = tf.keras.models.load_model("models/model.h5")
+        logger.info("Model loaded successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Error loading model: {str(e)}")
+        return False
 
 
 # User class for authentication
@@ -74,19 +135,6 @@ def load_user(user_id):
         if user.id == user_id:
             return user
     return None
-
-
-def load_model_safe():
-    """Safely load the model with error handling."""
-    global model
-    try:
-        with model_lock:
-            model = tf.keras.models.load_model("models/model.h5")
-        logger.info("Model loaded successfully")
-        return True
-    except Exception as e:
-        logger.error(f"Error loading model: {str(e)}")
-        return False
 
 
 def process_image(image_data):
@@ -169,6 +217,7 @@ def logout():
 @app.route("/predict", methods=["POST"])
 @login_required
 def predict():
+    """Handle single image prediction."""
     try:
         if "file" not in request.files:
             logger.error("No file part in request")
@@ -203,7 +252,7 @@ def predict():
 
                 result = {
                     "defect_probability": float(prediction[0][0]),
-                    "timestamp": datetime.now().isoformat(),
+                    "has_defect": bool(prediction[0][0] > 0.5),
                 }
 
                 # Save prediction to history
@@ -213,16 +262,16 @@ def predict():
 
             except Exception as e:
                 PREDICTION_ERROR_COUNT.inc()
-                logger.error(f"Prediction error: {str(e)}")
-                return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
+                logger.error(f"Error making prediction: {str(e)}")
+                return jsonify({"error": str(e)}), 500
 
     except Exception as e:
-        ERROR_COUNT.labels(error_type="predict_endpoint").inc()
-        logger.error(f"Error in predict endpoint: {str(e)}")
+        ERROR_COUNT.labels(error_type="prediction").inc()
+        logger.error(f"Error in prediction endpoint: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/batch", methods=["GET"])
+@app.route("/batch")
 @login_required
 def batch():
     """Render batch processing page."""
@@ -236,21 +285,18 @@ def history():
     return render_template("history.html")
 
 
-@app.route("/api/history")
+@app.route("/get_history")
 @login_required
 def get_history():
     """Get prediction history."""
-    try:
-        history_file = Path("monitoring/predictions/history.json")
-        if not history_file.exists():
-            return jsonify([])
+    history_file = Path("monitoring/predictions/history.json")
+    if not history_file.exists():
+        return jsonify([])
 
-        with open(history_file, "r") as f:
-            history = json.load(f)
-        return jsonify(history)
-    except Exception as e:
-        logger.error(f"Error loading history: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+    with open(history_file, "r") as f:
+        history = json.load(f)
+
+    return jsonify(history)
 
 
 @app.route("/dashboard")
@@ -263,123 +309,148 @@ def dashboard():
 @app.route("/health")
 def health():
     """Health check endpoint."""
+    model_status = "healthy" if model is not None else "degraded"
+    if model_status == "degraded":
+        # Try to load model if it's not loaded
+        if load_model_safe():
+            model_status = "healthy"
+
     return jsonify(
         {
-            "status": "healthy" if model is not None else "degraded",
+            "status": model_status,
             "timestamp": datetime.utcnow().isoformat(),
         }
     )
 
 
-@app.route("/reload-model", methods=["POST"])
+@app.route("/reload_model", methods=["POST"])
 @login_required
 def reload_model():
     """Endpoint to reload the model."""
-    success = load_model_safe()
-    return jsonify(
-        {
-            "success": success,
-            "message": (
-                "Model reloaded successfully" if success else "Failed to reload model"
-            ),
-        }
-    )
+    try:
+        if download_model_from_gcs() and load_model_safe():
+            return jsonify({"status": "success", "message": "Model reloaded successfully"})
+        else:
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Failed to reload model. Check logs for details.",
+                    }
+                ),
+                500,
+            )
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@app.route("/metrics", methods=["GET"])
-def metrics() -> Tuple[bytes, int, Dict[str, str]]:
+@app.route("/metrics")
+def metrics():
     """Endpoint for Prometheus metrics."""
     return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
 
-@app.route("/status", methods=["GET"])
-def status() -> Tuple[Dict[str, Any], int]:
+@app.route("/status")
+@login_required
+def status():
     """Detailed status endpoint for monitoring."""
-    status_info = {
-        "status": "operational",
-        "model_loaded": model is not None,
-        "model_info": {
-            "input_shape": model.input_shape if model else None,
-            "output_shape": model.output_shape if model else None,
-        },
-        "system_info": {
+    return jsonify(
+        {
+            "status": "healthy" if model is not None else "degraded",
+            "model_loaded": model is not None,
+            "prediction_queue_size": prediction_queue.qsize(),
+            "uptime": time.time() - start_time,
+            "memory_usage": {
+                "total": os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES"),
+                "available": os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES"),
+            },
             "timestamp": datetime.utcnow().isoformat(),
-            "version": os.environ.get("VERSION", "dev"),
-            "environment": os.environ.get("ENVIRONMENT", "development"),
-        },
-    }
-    return jsonify(status_info), 200
+        }
+    )
 
 
-@app.route("/batch-predict", methods=["POST"])
+@app.route("/batch_predict", methods=["POST"])
 @login_required
 def batch_predict():
     """Endpoint for making predictions on multiple images."""
-    # Check if images were uploaded
-    if "images" not in request.files:
-        return jsonify({"error": "No images uploaded"}), 400
+    try:
+        if "files[]" not in request.files:
+            return jsonify({"error": "No files uploaded"}), 400
 
-    files = request.files.getlist("images")
-    results = []
+        files = request.files.getlist("files[]")
+        if not files:
+            return jsonify({"error": "No files selected"}), 400
 
-    for file in files:
-        # Check file type
-        if not allowed_file(file.filename):
-            continue
+        results = []
+        for file in files:
+            if file.filename == "":
+                continue
 
-        try:
-            # Save file temporarily
-            filename = secure_filename(file.filename)
-            temp_path = os.path.join("/tmp", filename)
-            file.save(temp_path)
+            if not allowed_file(file.filename):
+                results.append(
+                    {
+                        "filename": file.filename,
+                        "error": "Invalid file type",
+                    }
+                )
+                continue
 
-            # Preprocess image
-            img = load_image(temp_path)
-            img = resize_image(img)
-            img = normalize_image(img)
-            img = np.expand_dims(img, axis=0)
+            try:
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                file.save(filepath)
 
-            # Make prediction
-            prediction = float(model.predict(img)[0, 0])
+                with PREDICTION_LATENCY.time():
+                    PREDICTION_REQUEST_COUNT.inc()
+                    image_data = tf.io.read_file(filepath)
+                    image_data = process_image(image_data)
+                    with model_lock:
+                        if model is None:
+                            load_model_safe()
+                        prediction = model.predict(image_data)
 
-            # Clean up
-            os.remove(temp_path)
-
-            # Add result
-            results.append(
-                {
-                    "filename": file.filename,
-                    "prediction": "defect" if prediction > 0.5 else "no_defect",
-                    "confidence": float(
-                        prediction if prediction > 0.5 else 1 - prediction
-                    ),
+                result = {
+                    "filename": filename,
+                    "defect_probability": float(prediction[0][0]),
+                    "has_defect": bool(prediction[0][0] > 0.5),
                 }
-            )
 
-        except Exception as e:
-            results.append({"filename": file.filename, "error": str(e)})
+                save_prediction_history(filepath, result)
+                results.append(result)
 
-    return jsonify({"results": results}), 200
+            except Exception as e:
+                PREDICTION_ERROR_COUNT.inc()
+                results.append(
+                    {
+                        "filename": file.filename,
+                        "error": str(e),
+                    }
+                )
+
+        return jsonify(results)
+
+    except Exception as e:
+        ERROR_COUNT.labels(error_type="batch_prediction").inc()
+        return jsonify({"error": str(e)}), 500
 
 
 def allowed_file(filename):
     """Check if file has an allowed extension."""
-    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    )
 
 
-def secure_filename(filename):
-    """Secure filename by removing special characters."""
-    return filename.replace(" ", "_").replace("/", "_").replace("\\", "_")
-
+# Start time for uptime tracking
+start_time = time.time()
 
 if __name__ == "__main__":
     # Start Prometheus metrics server
     start_http_server(8000)
 
-    # Load the model
+    # Load model on startup
     load_model_safe()
 
     # Run the Flask app
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

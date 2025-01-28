@@ -28,6 +28,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     libgl1-mesa-glx \
     libglib2.0-0 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy wheels and requirements
@@ -40,6 +41,11 @@ RUN pip install --no-cache /wheels/*
 # Copy application code
 COPY . .
 
+# Create necessary directories
+RUN mkdir -p /app/models && \
+    mkdir -p /app/data/uploads && \
+    mkdir -p /app/data/test
+
 # Set ownership to non-root user
 RUN chown -R appuser:appuser /app
 
@@ -50,9 +56,14 @@ USER appuser
 ARG SECRET_KEY
 ENV SECRET_KEY=${SECRET_KEY}
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
 
 # Expose port
 EXPOSE 8080
 
-# Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+# Run the application with proper timeout and worker configuration
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "120", "--workers", "2", "--threads", "4", "--worker-class", "gthread", "app:app"]

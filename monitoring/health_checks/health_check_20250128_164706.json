@@ -1,0 +1,42 @@
+{
+  "timestamp": "2025-01-28T16:47:06.298848",
+  "service_url": "http://localhost:8080",
+  "checks": {
+    "health": {
+      "status": "healthy",
+      "response": {
+        "model_loaded": false,
+        "status": "healthy",
+        "timestamp": "2025-01-28T16:47:08.346179",
+        "version": "dev"
+      }
+    },
+    "status": {
+      "status": "healthy",
+      "response": {
+        "model_info": {
+          "input_shape": null,
+          "output_shape": null
+        },
+        "model_loaded": false,
+        "status": "operational",
+        "system_info": {
+          "environment": "development",
+          "timestamp": "2025-01-28T16:47:10.391099",
+          "version": "dev"
+        }
+      }
+    },
+    "metrics": {
+      "status": "healthy",
+      "response": {
+        "status": "ok"
+      }
+    }
+  },
+  "overall_health": {
+    "status": "healthy",
+    "healthy_checks": 3,
+    "total_checks": 3
+  }
+}

@@ -1,10 +1,11 @@
 """Test script to verify the setup of our defect detection project."""
 
-import tensorflow as tf
-import numpy as np
+from pathlib import Path
+
 import cv2
 import matplotlib.pyplot as plt
-from pathlib import Path
+import numpy as np
+import tensorflow as tf
 
 
 def test_imports():

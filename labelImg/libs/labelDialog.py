@@ -1,12 +1,12 @@
 try:
-    from PyQt5.QtGui import *
     from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
     from PyQt5.QtWidgets import *
 except ImportError:
     from PyQt4.QtGui import *
     from PyQt4.QtCore import *
 
-from libs.utils import new_icon, label_validator, trimmed
+from libs.utils import label_validator, new_icon, trimmed
 
 BB = QDialogButtonBox
 

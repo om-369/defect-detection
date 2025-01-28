@@ -1,7 +1,7 @@
 import sys
 
 try:
-    from PyQt5.QtWidgets import QWidget, QHBoxLayout, QComboBox
+    from PyQt5.QtWidgets import QComboBox, QHBoxLayout, QWidget
 except ImportError:
     # needed for py3+qt4
     # Ref:
@@ -11,7 +11,7 @@ except ImportError:
         import sip
 
         sip.setapi("QVariant", 2)
-    from PyQt4.QtGui import QWidget, QHBoxLayout, QComboBox
+    from PyQt4.QtGui import QComboBox, QHBoxLayout, QWidget
 
 
 class ComboBox(QWidget):

@@ -8,9 +8,9 @@ Contact: justin900429@gmail.com
 Time: 2021.02.06
 """
 
-import os
 import argparse
 import codecs
+import os
 
 import pandas as pd
 

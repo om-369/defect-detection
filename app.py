@@ -1,30 +1,36 @@
 """Flask application for defect detection service."""
 
-import os
-import time
-import threading
+import json
 import logging
-import queue 
-from typing import Dict, Any, Tuple
+import os
+import queue
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, Tuple
 
 import numpy as np
-from flask import Flask, request, jsonify, render_template, send_file, session, redirect, url_for
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
 import tensorflow as tf
-from prometheus_client import Counter, Histogram, start_http_server, generate_latest, CONTENT_TYPE_LATEST
+from flask import (Flask, jsonify, redirect, render_template, request,
+                   send_file, session, url_for)
+from flask_login import (LoginManager, UserMixin, current_user, login_required,
+                         login_user, logout_user)
+from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Histogram,
+                               generate_latest, start_http_server)
 from pythonjsonlogger import jsonlogger
+from werkzeug.security import check_password_hash, generate_password_hash
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key')  # Change this in production
+app.secret_key = os.environ.get(
+    "SECRET_KEY", "your-secret-key"
+)  # Change this in production
 
 # Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.login_view = "login"
 
 # Configure logging
 logger = logging.getLogger()
@@ -35,15 +41,20 @@ logger.addHandler(logHandler)
 logger.setLevel(logging.INFO)
 
 # Prometheus metrics
-PREDICTION_REQUEST_COUNT = Counter('prediction_requests_total', 'Total prediction requests')
-PREDICTION_LATENCY = Histogram('prediction_latency_seconds', 'Prediction latency in seconds')
-PREDICTION_ERROR_COUNT = Counter('prediction_errors_total', 'Total prediction errors')
-ERROR_COUNT = Counter('error_count_total', 'Total number of errors', ['error_type'])
+PREDICTION_REQUEST_COUNT = Counter(
+    "prediction_requests_total", "Total prediction requests"
+)
+PREDICTION_LATENCY = Histogram(
+    "prediction_latency_seconds", "Prediction latency in seconds"
+)
+PREDICTION_ERROR_COUNT = Counter("prediction_errors_total", "Total prediction errors")
+ERROR_COUNT = Counter("error_count_total", "Total number of errors", ["error_type"])
 
 # Global variables
 model = None
 model_lock = threading.Lock()
 prediction_queue = queue.Queue()
+
 
 # User class for authentication
 class User(UserMixin):
@@ -52,10 +63,10 @@ class User(UserMixin):
         self.username = username
         self.password_hash = password_hash
 
+
 # Mock user database (replace with real database in production)
-users = {
-    'admin': User('1', 'admin', generate_password_hash('admin'))
-}
+users = {"admin": User("1", "admin", generate_password_hash("admin"))}
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -64,17 +75,19 @@ def load_user(user_id):
             return user
     return None
 
+
 def load_model_safe():
     """Safely load the model with error handling."""
     global model
     try:
         with model_lock:
-            model = tf.keras.models.load_model('models/model.h5')
+            model = tf.keras.models.load_model("models/model.h5")
         logger.info("Model loaded successfully")
         return True
     except Exception as e:
         logger.error(f"Error loading model: {str(e)}")
         return False
+
 
 def process_image(image_data):
     """Process image data for prediction."""
@@ -87,175 +100,216 @@ def process_image(image_data):
         logger.error(f"Error processing image: {str(e)}")
         raise
 
+
 def save_prediction_history(image_path, result):
     """Save prediction results to history."""
-    history_dir = Path('monitoring/predictions')
+    history_dir = Path("monitoring/predictions")
     history_dir.mkdir(parents=True, exist_ok=True)
-    
-    history_file = history_dir / 'history.json'
+
+    history_file = history_dir / "history.json"
     history = []
-    
+
     if history_file.exists():
-        with open(history_file, 'r') as f:
+        with open(history_file, "r") as f:
             history = json.load(f)
-    
-    history.append({
-        'timestamp': datetime.utcnow().isoformat(),
-        'image_path': str(image_path),
-        'result': result
-    })
-    
-    with open(history_file, 'w') as f:
+
+    history.append(
+        {
+            "timestamp": datetime.utcnow().isoformat(),
+            "image_path": str(image_path),
+            "result": result,
+        }
+    )
+
+    with open(history_file, "w") as f:
         json.dump(history, f, indent=2)
 
-@app.route('/')
+
+# File upload configuration
+UPLOAD_FOLDER = "uploads"
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
+
+# Ensure upload directory exists
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+@app.route("/")
 def index():
     """Render the main page."""
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/login', methods=['GET', 'POST'])
+
+@app.route("/login", methods=["GET", "POST"])
 def login():
     """Handle user login."""
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
         user = users.get(username)
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
-            return redirect(url_for('index'))
-        
-        return 'Invalid username or password'
-    
-    return render_template('login.html')
+            return redirect(url_for("index"))
 
-@app.route('/logout')
+        return "Invalid username or password"
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
 @login_required
 def logout():
     """Handle user logout."""
     logout_user()
-    return redirect(url_for('index'))
+    return redirect(url_for("index"))
 
-@app.route('/predict', methods=['POST'])
+
+@app.route("/predict", methods=["POST"])
 @login_required
 def predict():
-    """Handle prediction requests."""
-    start_time = time.time()
-    PREDICTION_REQUEST_COUNT.inc()
-    
     try:
-        if 'image' not in request.files:
-            raise ValueError("No image file provided")
-        
-        image_file = request.files['image']
-        image_data = image_file.read()
-        
-        # Process image
-        img = process_image(image_data)
-        
-        # Make prediction
-        with model_lock:
-            if model is None:
-                if not load_model_safe():
-                    raise ValueError("Model not available")
-            prediction = model.predict(img)
-        
-        # Process results
-        defect_probability = float(prediction[0][0])
-        defect_detected = defect_probability > 0.5
-        processing_time = time.time() - start_time
-        
-        result = {
-            'defect_detected': defect_detected,
-            'defect_probability': defect_probability,
-            'processing_time': processing_time
-        }
-        
-        # Save to history
-        save_prediction_history(image_file.filename, result)
-        
-        PREDICTION_LATENCY.observe(processing_time)
-        return jsonify(result)
-    
-    except Exception as e:
-        PREDICTION_ERROR_COUNT.inc()
-        logger.error(f"Prediction error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        if "file" not in request.files:
+            logger.error("No file part in request")
+            return jsonify({"error": "No file part"}), 400
 
-@app.route('/batch', methods=['GET'])
+        file = request.files["file"]
+        if file.filename == "":
+            logger.error("No selected file")
+            return jsonify({"error": "No selected file"}), 400
+
+        if not allowed_file(file.filename):
+            logger.error(f"Invalid file type: {file.filename}")
+            return (
+                jsonify({"error": "Invalid file type. Allowed types: png, jpg, jpeg"}),
+                400,
+            )
+
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(filepath)
+
+        # Process image and make prediction
+        with PREDICTION_LATENCY.time():
+            PREDICTION_REQUEST_COUNT.inc()
+            try:
+                image_data = tf.io.read_file(filepath)
+                image_data = process_image(image_data)
+                with model_lock:
+                    if model is None:
+                        load_model_safe()
+                    prediction = model.predict(image_data)
+
+                result = {
+                    "defect_probability": float(prediction[0][0]),
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+                # Save prediction to history
+                save_prediction_history(filepath, result)
+
+                return jsonify(result)
+
+            except Exception as e:
+                PREDICTION_ERROR_COUNT.inc()
+                logger.error(f"Prediction error: {str(e)}")
+                return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
+
+    except Exception as e:
+        ERROR_COUNT.labels(error_type="predict_endpoint").inc()
+        logger.error(f"Error in predict endpoint: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/batch", methods=["GET"])
 @login_required
 def batch():
     """Render batch processing page."""
-    return render_template('batch.html')
+    return render_template("batch.html")
 
-@app.route('/history')
+
+@app.route("/history")
 @login_required
 def history():
     """Render history page."""
-    return render_template('history.html')
+    return render_template("history.html")
 
-@app.route('/api/history')
+
+@app.route("/api/history")
 @login_required
 def get_history():
     """Get prediction history."""
     try:
-        history_file = Path('monitoring/predictions/history.json')
+        history_file = Path("monitoring/predictions/history.json")
         if not history_file.exists():
             return jsonify([])
-        
-        with open(history_file, 'r') as f:
+
+        with open(history_file, "r") as f:
             history = json.load(f)
         return jsonify(history)
     except Exception as e:
         logger.error(f"Error loading history: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/dashboard')
+
+@app.route("/dashboard")
 @login_required
 def dashboard():
     """Render monitoring dashboard."""
-    return render_template('dashboard.html')
+    return render_template("dashboard.html")
 
-@app.route('/health')
+
+@app.route("/health")
 def health():
     """Health check endpoint."""
-    return jsonify({
-        'status': 'healthy' if model is not None else 'degraded',
-        'timestamp': datetime.utcnow().isoformat()
-    })
+    return jsonify(
+        {
+            "status": "healthy" if model is not None else "degraded",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    )
 
-@app.route('/reload-model', methods=['POST'])
+
+@app.route("/reload-model", methods=["POST"])
 @login_required
 def reload_model():
     """Endpoint to reload the model."""
     success = load_model_safe()
-    return jsonify({
-        'success': success,
-        'message': 'Model reloaded successfully' if success else 'Failed to reload model'
-    })
+    return jsonify(
+        {
+            "success": success,
+            "message": (
+                "Model reloaded successfully" if success else "Failed to reload model"
+            ),
+        }
+    )
 
-@app.route('/metrics', methods=['GET'])
+
+@app.route("/metrics", methods=["GET"])
 def metrics() -> Tuple[bytes, int, Dict[str, str]]:
     """Endpoint for Prometheus metrics."""
-    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
+    return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
-@app.route('/status', methods=['GET'])
+
+@app.route("/status", methods=["GET"])
 def status() -> Tuple[Dict[str, Any], int]:
     """Detailed status endpoint for monitoring."""
     status_info = {
-        'status': 'operational',
-        'model_loaded': model is not None,
-        'model_info': {
-            'input_shape': model.input_shape if model else None,
-            'output_shape': model.output_shape if model else None
+        "status": "operational",
+        "model_loaded": model is not None,
+        "model_info": {
+            "input_shape": model.input_shape if model else None,
+            "output_shape": model.output_shape if model else None,
         },
-        'system_info': {
-            'timestamp': datetime.utcnow().isoformat(),
-            'version': os.environ.get('VERSION', 'dev'),
-            'environment': os.environ.get('ENVIRONMENT', 'development')
-        }
+        "system_info": {
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": os.environ.get("VERSION", "dev"),
+            "environment": os.environ.get("ENVIRONMENT", "development"),
+        },
     }
     return jsonify(status_info), 200
+
 
 @app.route("/batch-predict", methods=["POST"])
 @login_required
@@ -307,22 +361,25 @@ def batch_predict():
 
     return jsonify({"results": results}), 200
 
+
 def allowed_file(filename):
     """Check if file has an allowed extension."""
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
 def secure_filename(filename):
     """Secure filename by removing special characters."""
     return filename.replace(" ", "_").replace("/", "_").replace("\\", "_")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Start Prometheus metrics server
     start_http_server(8000)
-    
+
     # Load the model
     load_model_safe()
-    
+
     # Run the Flask app
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

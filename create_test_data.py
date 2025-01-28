@@ -1,8 +1,9 @@
 """Script to create synthetic test data for defect detection."""
 
-import numpy as np
-import cv2
 from pathlib import Path
+
+import cv2
+import numpy as np
 
 
 def create_synthetic_image(size=(224, 224), has_defect=False):

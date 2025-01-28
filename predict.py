@@ -1,15 +1,16 @@
 """Script for making predictions using the trained model."""
 
-import tensorflow as tf
-import numpy as np
-from pathlib import Path
-import cv2
 import sys
+from pathlib import Path
+
+import cv2
+import numpy as np
+import tensorflow as tf
 
 # Add project root to path
 sys.path.append(str(Path(__file__).resolve().parent))
 from config import IMG_SIZE
-from src.data.preprocessing import load_image, resize_image, normalize_image
+from src.data.preprocessing import load_image, normalize_image, resize_image
 from src.utils.visualization import visualize_predictions
 
 

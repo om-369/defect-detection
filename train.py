@@ -1,23 +1,18 @@
 """Main training script for the defect detection model."""
 
-import tensorflow as tf
-import numpy as np
-from pathlib import Path
-from sklearn.model_selection import train_test_split
 import sys
+from pathlib import Path
+
+import numpy as np
+import tensorflow as tf
+from sklearn.model_selection import train_test_split
 
 # Add project root to path
 sys.path.append(str(Path(__file__).resolve().parent))
-from config import (
-    DATA_DIR,
-    BATCH_SIZE,
-    TRAIN_SPLIT,
-    VAL_SPLIT,
-    TEST_SPLIT,
-    MODEL_CONFIG,
-)
+from config import (BATCH_SIZE, DATA_DIR, MODEL_CONFIG, TEST_SPLIT,
+                    TRAIN_SPLIT, VAL_SPLIT)
 from src.data.preprocessing import create_dataset
-from src.models.model import create_model, compile_model, get_callbacks
+from src.models.model import compile_model, create_model, get_callbacks
 from src.utils.visualization import plot_training_history
 
 

@@ -1,22 +1,54 @@
 # Development Configuration
 
 # Application Settings
-debug: true
-environment: "development"
-secret_key: "dev-secret-key-replace-in-production"
-max_content_length: 16777216  # 16MB
+app:
+  debug: true
+  environment: "development"
+  secret_key: "dev-secret-key-replace-in-production"
+  max_content_length: 16777216  # 16MB
 
 # Upload Settings
 upload_folder: "uploads"
 allowed_extensions: ["png", "jpg", "jpeg"]
 
 # Model Settings
-model_path: "models/latest"
-confidence_threshold: 0.5
+model:
+  path: "models/latest"
+  learning_rate: 5.0e-5  # Slightly higher learning rate for development
+  epochs: 10  # Fewer epochs for faster iteration
+  early_stopping:
+    patience: 2  # More aggressive early stopping
+  save_weights_only: true  # Save only weights for faster saving
+  confidence_threshold: 0.5
+
+# Training configuration
+training:
+  batch_size: 16  # Smaller batch size for development
+  validation_freq: 1
+  verbose: 2  # More verbose output
 
 # Monitoring
-enable_monitoring: true
-health_check_interval: 300  # seconds
+monitoring:
+  enabled: true
+  health_check_interval: 300  # seconds
+  log_level: "DEBUG"
+  metrics:
+    - accuracy
+    - loss
+  profiling: true
+
+# Data augmentation - less aggressive for development
+augmentation:
+  rotation_range: 15
+  width_shift_range: 0.1
+  height_shift_range: 0.1
+  zoom_range: 0.1
+
+# Inference settings
+inference:
+  confidence_threshold: 0.4  # Lower threshold for development
+  max_detections: 50
+  nms_threshold: 0.4
 
 # Database Settings
 db_host: "localhost"

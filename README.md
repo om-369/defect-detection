@@ -79,6 +79,30 @@ export MODEL_BUCKET=your-gcs-bucket-name
 export PORT=8080  # Default: 8080
 ```
 
+## Environment Variables
+
+The application can be configured using the following environment variables:
+
+- `PORT`: The port to run the server on (default: 8080)
+- `HOST`: The host interface to bind to (default: 127.0.0.1)
+- `CLOUD_RUN`: Set to "1" to bind to all interfaces (0.0.0.0), required for Cloud Run
+- `MODEL_BUCKET`: Google Cloud Storage bucket for model storage
+- `SECRET_KEY`: Flask application secret key
+- `DEBUG`: Set to "1" to enable debug mode (default: disabled)
+
+For local development, you can create a `.env` file:
+```bash
+# Local development settings
+PORT=8080
+HOST=127.0.0.1
+DEBUG=1
+
+# Production settings (Cloud Run)
+# PORT=8080
+# HOST=0.0.0.0
+# CLOUD_RUN=1
+```
+
 ## GitHub Actions CI/CD Setup
 
 The CI/CD pipeline requires the following secrets to be set in your GitHub repository:

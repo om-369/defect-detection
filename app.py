@@ -528,8 +528,16 @@ start_time = time.time()
 
 if __name__ == "__main__":
     start_http_server(8000)
-    # Load model on startup
-    load_model_safe()
-
+    # Get configuration from environment variables
+    port = int(os.environ.get("PORT", 8080))
+    
+    # In production (e.g. Cloud Run), we need to bind to all interfaces
+    # In development, we only bind to localhost for security
+    host = os.environ.get("HOST", "127.0.0.1")
+    
+    # If running in Cloud Run or similar environment where we need to bind to all interfaces
+    if os.environ.get("CLOUD_RUN") == "1":
+        host = "0.0.0.0"
+    
     # Run the Flask app
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    app.run(host=host, port=port)  # nosec B104 - Binding is controlled by environment

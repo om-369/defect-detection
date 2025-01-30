@@ -124,3 +124,4 @@ jobs:
           env_vars: |
             MODEL_BUCKET=${{ env.MODEL_BUCKET }}
             SECRET_KEY=${{ env.SECRET_KEY }}
+            CLOUD_RUN=1

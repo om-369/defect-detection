@@ -16,12 +16,10 @@ def create_model(num_classes: int = MODEL_CONFIG["num_classes"]) -> tf.keras.Mod
     """
     # Create input layer with correct shape
     inputs = tf.keras.layers.Input(shape=(IMG_SIZE, IMG_SIZE, 3))
-    
+
     # Create base model
     base_model = tf.keras.applications.MobileNetV2(
-        include_top=False,
-        weights="imagenet",
-        input_tensor=inputs
+        include_top=False, weights="imagenet", input_tensor=inputs
     )
     base_model.trainable = False
 
@@ -36,7 +34,7 @@ def create_model(num_classes: int = MODEL_CONFIG["num_classes"]) -> tf.keras.Mod
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=MODEL_CONFIG["learning_rate"]),
         loss=tf.keras.losses.BinaryCrossentropy(),
-        metrics=["accuracy"]
+        metrics=["accuracy"],
     )
 
     return model

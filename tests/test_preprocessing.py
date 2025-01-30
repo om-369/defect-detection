@@ -23,7 +23,7 @@ def test_data_dir():
     no_defect_dir = test_dir / "no_defect"
 
     # Create test image
-    img = Image.new('RGB', (100, 100), color='red')
+    img = Image.new("RGB", (100, 100), color="red")
     img.save(defect_dir / "test_image.jpg")
     img.save(no_defect_dir / "test_image.jpg")
 
@@ -52,7 +52,7 @@ def test_image_resizing(test_image_path):
     """Test image resizing functionality."""
     # Load and preprocess image
     img = preprocess_image(test_image_path)
-    
+
     # Check dimensions
     assert img.shape == (1, IMG_SIZE, IMG_SIZE, 3)
 
@@ -61,7 +61,7 @@ def test_image_normalization(test_image_path):
     """Test image normalization functionality."""
     # Load and preprocess image
     img = preprocess_image(test_image_path)
-    
+
     # Check if values are normalized
     assert tf.reduce_max(img) <= 1.0
     assert tf.reduce_min(img) >= 0.0

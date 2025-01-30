@@ -21,13 +21,10 @@ def preprocess_image(image_path: Union[str, Path]) -> tf.Tensor:
     image_path = tf.convert_to_tensor(image_path, dtype=tf.string)
     image_path = tf.squeeze(image_path)
     image = tf.io.read_file(image_path)
-
     # Validate image format
-    image = tf.cond(
-        tf.image.is_jpeg(image),
-        lambda: tf.image.decode_jpeg(image, channels=3),
-        lambda: tf.image.decode_png(image, channels=3)
-    )
+    if not tf.image.is_jpeg(image):
+        image = tf.io.encode_jpeg(image)
+    image = tf.image.decode_jpeg(image, channels=3)
     if image.dtype != tf.uint8:
         image = tf.image.convert_image_dtype(image, tf.uint8)
 
@@ -82,12 +79,12 @@ def create_dataset(
     # Map preprocessing function
     def process_path(path):
         # Extract label from path
-        label = tf.strings.regex_full_match(path, r'.*[\\/]defect[\\/].*')
+        label = tf.strings.regex_full_match(path, r".*[\\/]defect[\\/].*")
         label = tf.cast(label, tf.float32)
-        
+
         # Process image
         image = preprocess_image(path)
-        
+
         return image, label
 
     dataset = dataset.map(process_path, num_parallel_calls=tf.data.AUTOTUNE)

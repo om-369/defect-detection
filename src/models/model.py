@@ -1,6 +1,9 @@
 """Model definition for defect detection."""
 
 import tensorflow as tf
+from tensorflow import keras
+
+layers = keras.layers
 
 from src.config import IMG_SIZE, MODEL_CONFIG
 
@@ -22,7 +25,7 @@ def create_model(num_classes: int = MODEL_CONFIG["num_classes"]) -> tf.keras.Mod
         include_top=False,
         weights="imagenet",
         input_shape=(IMG_SIZE, IMG_SIZE, 3),
-        input_tensor=inputs
+        input_tensor=inputs,
     )
     base_model.trainable = False
 
@@ -30,14 +33,22 @@ def create_model(num_classes: int = MODEL_CONFIG["num_classes"]) -> tf.keras.Mod
     x = base_model(inputs)
     x = tf.keras.layers.GlobalAveragePooling2D()(x)
     x = tf.keras.layers.Dropout(0.2)(x)
+    x = layers.Dropout(0.3)(x)
+    x = layers.Dense(128, activation="relu")(x)
+    x = layers.Dropout(0.2)(x)
     outputs = tf.keras.layers.Dense(num_classes, activation="sigmoid")(x)
 
     # Create and compile model
+    # Learning rate scheduler
+    lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+        initial_learning_rate=1e-3, decay_steps=10000, decay_rate=0.96
+    )
+    optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
     model = tf.keras.Model(inputs=inputs, outputs=outputs)
     model.compile(
-        optimizer='adam',
-        loss='binary_crossentropy',
-        metrics=[tf.keras.metrics.BinaryAccuracy(name='binary_accuracy')]
+        optimizer=optimizer,
+        loss="binary_crossentropy",
+        metrics=[tf.keras.metrics.BinaryAccuracy(name="binary_accuracy")],
     )
 
     return model

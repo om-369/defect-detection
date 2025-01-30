@@ -27,7 +27,7 @@ def test_model():
 def test_data_dir():
     """Get path to test data directory."""
     test_data_dir = Path(__file__).resolve().parent / "data" / "test_images"
-    test_data_dir = os.path.abspath(test_data_dir).replace('\\', '/')
+    test_data_dir = os.path.abspath(test_data_dir).replace("\\", "/")
     return test_data_dir
 
 
@@ -48,7 +48,7 @@ def test_model_compilation(test_model):
     # Check if model is compiled
     assert test_model.optimizer is not None
     assert test_model.loss is not None
-    assert any(metric.name == 'binary_accuracy' for metric in test_model.metrics)
+    assert any(metric.name == "accuracy" for metric in test_model.metrics)
 
 
 def test_model_prediction(test_model):
@@ -70,13 +70,11 @@ def test_model_training(test_model, test_data_dir):
     """Test model training."""
     # Create small test dataset
     batch_size = 4
-    test_dataset = create_dataset(
-        test_data_dir, batch_size=batch_size, shuffle=True
-    )
+    test_dataset = create_dataset(test_data_dir, batch_size=batch_size, shuffle=True)
 
     # Train for one epoch
     history = test_model.fit(test_dataset, epochs=1, steps_per_epoch=2)
 
     # Check if training metrics are present
     assert "loss" in history.history
-    assert "binary_accuracy" in history.history
+    assert "accuracy" in history.history

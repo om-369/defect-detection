@@ -1,3 +1,11 @@
+# Defect Detection CI/CD Pipeline
+#
+# Required GitHub Secrets:
+# - GCP_PROJECT: Google Cloud Project ID
+# - GCP_SA_KEY: Google Cloud Service Account key (JSON)
+# - SECRET_KEY: Flask application secret key
+# - MODEL_BUCKET: GCS bucket name for model storage
+
 name: CI/CD Pipeline
 
 on:
@@ -9,11 +17,11 @@ on:
 env:
   PYTHON_VERSION: '3.12'
   DOCKER_IMAGE: defect-detection
-  GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
   GCP_REGION: us-central1
   SERVICE_NAME: defect-detection-service
-  SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
-  MODEL_BUCKET: ${{ secrets.GCP_MODEL_BUCKET }}
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  MODEL_BUCKET: ${{ secrets.MODEL_BUCKET }}
 
 jobs:
   quality:
@@ -75,6 +83,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT }}
           
       - name: Configure Docker for GCP
         run: gcloud auth configure-docker
@@ -100,6 +109,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT }}
           
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v1

@@ -79,6 +79,38 @@ export MODEL_BUCKET=your-gcs-bucket-name
 export PORT=8080  # Default: 8080
 ```
 
+## GitHub Actions CI/CD Setup
+
+The CI/CD pipeline requires the following secrets to be set in your GitHub repository:
+
+1. `GCP_PROJECT`: Your Google Cloud Project ID
+   - This is the project where your Docker images and Cloud Run service will be deployed
+   - Example: `my-project-123456`
+
+2. `GCP_SA_KEY`: Google Cloud Service Account key in JSON format
+   - Create a service account with the following roles:
+     - Cloud Run Admin
+     - Storage Admin
+     - Service Account User
+   - Download the key as JSON and paste the entire content as the secret value
+
+3. `SECRET_KEY`: Flask application secret key
+   - Used for session management and security
+   - Generate a secure random string, e.g., using:
+     ```bash
+     python -c 'import secrets; print(secrets.token_hex(32))'
+     ```
+
+4. `MODEL_BUCKET`: Google Cloud Storage bucket name
+   - The bucket where your ML models will be stored
+   - Example: `defect-detection-models`
+
+To set up these secrets:
+1. Go to your GitHub repository
+2. Navigate to Settings > Secrets and variables > Actions
+3. Click "New repository secret"
+4. Add each secret with its corresponding value
+
 ## Local Development
 
 1. Generate test data:

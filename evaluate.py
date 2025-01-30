@@ -17,8 +17,18 @@ from src.config import MODEL_CONFIG
 from src.data.preprocessing import create_dataset
 
 
-def evaluate_model(model_path="models/latest", test_data_dir="data/labeled"):
-    """Evaluate the model on test data."""
+def evaluate_model(
+    model_path: str = "models/latest", test_data_dir: str = "data/labeled"
+) -> dict:
+    """Evaluate the model on test data.
+
+    Args:
+        model_path: Path to the saved model
+        test_data_dir: Directory containing test data
+
+    Returns:
+        Dictionary containing evaluation metrics
+    """
     print("Loading model...")
     model = tf.keras.models.load_model(model_path)
 

@@ -32,10 +32,10 @@ def test_model_creation(test_model):
     """Test model creation."""
     # Check model architecture
     assert isinstance(test_model, tf.keras.Model)
-    
+
     # Check input shape
     assert test_model.input_shape == (None, *IMG_SIZE, 3)
-    
+
     # Check output shape (binary classification)
     assert test_model.output_shape == (None, 1)
 
@@ -43,7 +43,7 @@ def test_model_creation(test_model):
 def test_model_compilation(test_model):
     """Test model compilation."""
     compile_model(test_model)
-    
+
     # Check if model is compiled
     assert test_model.optimizer is not None
     assert test_model.loss is not None
@@ -53,10 +53,10 @@ def test_model_prediction(test_model):
     """Test model prediction."""
     # Create random input
     test_input = tf.random.uniform((1, *IMG_SIZE, 3))
-    
+
     # Get prediction
     prediction = test_model(test_input)
-    
+
     # Check prediction shape and range
     assert prediction.shape == (1, 1)
     assert 0 <= prediction[0, 0] <= 1
@@ -66,13 +66,13 @@ def test_model_training(test_model, test_data_dir):
     """Test model training."""
     # Create test dataset
     dataset = create_dataset(test_data_dir, batch_size=1)
-    
+
     # Compile model
     compile_model(test_model)
-    
+
     # Train for one epoch
     history = test_model.fit(dataset, epochs=1)
-    
+
     # Check if training happened
     assert "loss" in history.history
     assert len(history.history["loss"]) == 1

@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -21,91 +20,57 @@ wheels/
 .installed.cfg
 *.egg
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
-# Virtual environments
+# Virtual Environment
 venv/
 ENV/
+env/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-*~
 
-# Project specific
-data/raw/*
-!data/raw/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
-models/*
-!models/.gitkeep
-logs/*
-!logs/.gitkeep
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Model files and data
+models/*.h5
+models/*.pb
+models/*.tflite
 uploads/*
 !uploads/.gitkeep
-monitoring/health_checks/
-*.log
 
-# Security and secrets
-secrets_setup.txt
-*.key
-*.pem
-*.env
+# Environment variables
 .env
 .env.*
-credentials.json
-service-account.json
-keyfile.json
-*secret*
-*password*
-*credential*
+!.env.example
 
-# Temporary files
-*.tmp
-*.temp
-*.bak
+# System Files
 .DS_Store
+Thumbs.db
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# Training artifacts
+training_history.png
+*.ckpt
 
-# Distribution / packaging
-.Python
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
-eggs/
-parts/
-bin/
-var/
-sdist/
-develop-eggs/
-.installed.cfg
-lib/
-lib64/
+# Monitoring
+monitoring/*.json
+monitoring/*.csv
 
-# Installer files
-GoogleCloudSDKInstaller.exe
-*.msi
-*.exe
-*.zip
+# Docker
+.docker/
+docker-compose.override.yml

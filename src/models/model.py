@@ -2,8 +2,7 @@
 
 import tensorflow as tf
 from tensorflow import keras
-
-layers = keras.layers
+from tensorflow.keras import layers
 
 from src.config import IMG_SIZE, MODEL_CONFIG
 

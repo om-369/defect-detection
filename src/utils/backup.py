@@ -4,8 +4,6 @@ import json
 import logging
 import os
 import shutil
-import threading
-import time
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -33,7 +31,8 @@ class BackupManager:
         self.models_dir = self.base_dir / "models"
         self.configs_dir = self.base_dir / "configs"
 
-        for directory in [self.predictions_dir, self.models_dir, self.configs_dir]:
+        for directory in [self.predictions_dir, self.models_dir, 
+                          self.configs_dir]:
             directory.mkdir(exist_ok=True)
 
     def backup_predictions(self) -> bool:

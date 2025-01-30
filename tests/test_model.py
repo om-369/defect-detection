@@ -5,16 +5,16 @@ import os
 from pathlib import Path
 
 import numpy as np
-import pytest
 import tensorflow as tf
-
-# Add project root to path
-project_root = str(Path(__file__).resolve().parent.parent)
-sys.path.insert(0, project_root)
+import pytest
 
 from src.config import IMG_SIZE
 from src.models.model import create_model
 from src.preprocessing import create_dataset
+
+# Add project root to path
+project_root = str(Path(__file__).resolve().parent.parent)
+sys.path.insert(0, project_root)
 
 
 @pytest.fixture

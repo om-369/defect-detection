@@ -1,5 +1,5 @@
 import tensorflow as tf
-from config import IMG_SIZE, BATCH_SIZE
+from config import BATCH_SIZE
 from preprocessing import create_dataset
 from models.model import create_model
 

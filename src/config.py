@@ -1,6 +1,5 @@
 """Configuration settings for the defect detection project."""
 
-import os
 from pathlib import Path
 
 # Base paths

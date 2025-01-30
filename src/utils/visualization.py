@@ -18,7 +18,6 @@ def plot_training_history(history):
     """Plot training history metrics."""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
-    # Plot accuracy
     ax1.plot(history.history["accuracy"], label="Training Accuracy")
     ax1.plot(history.history["val_accuracy"], label="Validation Accuracy")
     ax1.set_title("Model Accuracy")
@@ -26,7 +25,6 @@ def plot_training_history(history):
     ax1.set_ylabel("Accuracy")
     ax1.legend()
 
-    # Plot loss
     ax2.plot(history.history["loss"], label="Training Loss")
     ax2.plot(history.history["val_loss"], label="Validation Loss")
     ax2.set_title("Model Loss")
@@ -44,7 +42,12 @@ def plot_confusion_matrix(y_true: np.ndarray, y_pred: np.ndarray, classes: List[
     cm = confusion_matrix(y_true, y_pred)
     plt.figure(figsize=(8, 6))
     sns.heatmap(
-        cm, annot=True, fmt="d", cmap="Blues", xticklabels=classes, yticklabels=classes
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=classes,
+        yticklabels=classes,
     )
     plt.title("Confusion Matrix")
     plt.ylabel("True Label")
@@ -77,17 +80,17 @@ def visualize_predictions(
 
 
 def plot_feature_maps(
-    model: tf.keras.Model, image: np.ndarray, layer_name: str, num_features: int = 16
+    model: tf.keras.Model,
+    image: np.ndarray,
+    layer_name: str,
+    num_features: int = 16,
 ):
     """Visualize feature maps from a specific layer for an input image."""
-    # Create a model that outputs the feature maps
     layer_outputs = [layer.output for layer in model.layers if layer.name == layer_name]
     visualization_model = tf.keras.Model(inputs=model.input, outputs=layer_outputs)
 
-    # Get feature maps
     feature_maps = visualization_model.predict(np.expand_dims(image, axis=0))
 
-    # Plot feature maps
     if len(feature_maps[0].shape) == 4:
         feature_maps = np.squeeze(feature_maps[0])
         num_features = min(num_features, feature_maps.shape[-1])
@@ -112,12 +115,21 @@ def plot_roc_curve(y_true: np.ndarray, y_pred_prob: np.ndarray) -> go.Figure:
 
     fig = go.Figure()
     fig.add_trace(
-        go.Scatter(x=fpr, y=tpr, name=f"ROC curve (AUC = {roc_auc:.2f})", mode="lines")
+        go.Scatter(
+            x=fpr,
+            y=tpr,
+            name=f"ROC curve (AUC = {roc_auc:.2f})",
+            mode="lines",
+        )
     )
 
     fig.add_trace(
         go.Scatter(
-            x=[0, 1], y=[0, 1], name="Random", mode="lines", line=dict(dash="dash")
+            x=[0, 1],
+            y=[0, 1],
+            name="Random",
+            mode="lines",
+            line=dict(dash="dash"),
         )
     )
 
@@ -137,7 +149,6 @@ def plot_defect_trend(history_data: List[Dict[str, Any]]) -> go.Figure:
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df["date"] = df["timestamp"].dt.date
 
-    # Calculate daily statistics
     daily_stats = (
         df.groupby("date").agg({"defect_detected": ["count", "sum"]}).reset_index()
     )
@@ -170,7 +181,10 @@ def plot_defect_trend(history_data: List[Dict[str, Any]]) -> go.Figure:
         secondary_y=True,
     )
 
-    fig.update_layout(title="Daily Defect Detection Trend", showlegend=True)
+    fig.update_layout(
+        title="Daily Defect Detection Trend",
+        showlegend=True,
+    )
 
     fig.update_xaxes(title_text="Date")
     fig.update_yaxes(title_text="Total Predictions", secondary_y=False)
@@ -185,7 +199,6 @@ def plot_performance_metrics(history_data: List[Dict[str, Any]]) -> go.Figure:
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df["hour"] = df["timestamp"].dt.floor("H")
 
-    # Calculate hourly statistics
     hourly_stats = (
         df.groupby("hour")
         .agg({"processing_time": ["mean", "max", "count"]})
@@ -195,10 +208,11 @@ def plot_performance_metrics(history_data: List[Dict[str, Any]]) -> go.Figure:
     hourly_stats.columns = ["hour", "avg_time", "max_time", "requests"]
 
     fig = make_subplots(
-        rows=2, cols=1, subplot_titles=("Processing Time", "Request Volume")
+        rows=2,
+        cols=1,
+        subplot_titles=("Processing Time", "Request Volume"),
     )
 
-    # Processing time plot
     fig.add_trace(
         go.Scatter(
             x=hourly_stats["hour"],
@@ -221,19 +235,22 @@ def plot_performance_metrics(history_data: List[Dict[str, Any]]) -> go.Figure:
         col=1,
     )
 
-    # Request volume plot
     fig.add_trace(
         go.Bar(
             x=hourly_stats["hour"],
             y=hourly_stats["requests"],
-            name="Request Volume",
+            name="Request Count",
             marker_color="rgb(158,202,225)",
         ),
         row=2,
         col=1,
     )
 
-    fig.update_layout(height=800, title="System Performance Metrics", showlegend=True)
+    fig.update_layout(
+        height=800,
+        showlegend=True,
+        title_text="System Performance Metrics",
+    )
 
     return fig
 
@@ -245,7 +262,7 @@ def plot_confidence_distribution(predictions: List[float]) -> go.Figure:
     fig.add_trace(
         go.Histogram(
             x=predictions,
-            nbinsx=50,
+            nbinsx=30,
             name="Confidence Distribution",
             marker_color="rgb(158,202,225)",
         )
@@ -256,23 +273,19 @@ def plot_confidence_distribution(predictions: List[float]) -> go.Figure:
         xaxis_title="Confidence Score",
         yaxis_title="Count",
         showlegend=True,
-        bargap=0.1,
     )
 
     return fig
 
 
-def create_monitoring_dashboard(
-    history_data: List[Dict[str, Any]]
-) -> Dict[str, go.Figure]:
+def create_monitoring_dashboard(history_data: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Create a complete monitoring dashboard."""
-    df = pd.DataFrame(history_data)
-
-    return {
+    dashboard = {
         "defect_trend": plot_defect_trend(history_data),
-        "performance": plot_performance_metrics(history_data),
-        "confidence": plot_confidence_distribution(df["defect_probability"].tolist()),
-        "roc": plot_roc_curve(
-            df["defect_detected"].astype(int).values, df["defect_probability"].values
+        "performance_metrics": plot_performance_metrics(history_data),
+        "confidence_distribution": plot_confidence_distribution(
+            [record["confidence"] for record in history_data if "confidence" in record]
         ),
     }
+
+    return dashboard

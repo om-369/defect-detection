@@ -23,11 +23,75 @@ from pythonjsonlogger import jsonlogger
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
+<<<<<<< Updated upstream
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get(
     "SECRET_KEY", "your-secret-key"
 )  # Change this in production
+=======
+
+# Configuration Management
+class Config:
+    _instance = None
+    _config: Dict[str, Any] = {}
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(Config, cls).__new__(cls)
+            cls._instance._load_config()
+        return cls._instance
+
+    def _load_config(self):
+        """Load configuration from environment.yml file and environment variables"""
+        config_path = Path("config/environment.yml")
+        if config_path.exists():
+            with open(config_path) as f:
+                self._config = yaml.safe_load(f)
+        env_prefix = "APP_"
+        for key, value in os.environ.items():
+            if key.startswith(env_prefix):
+                config_key = key[len(env_prefix) :].lower()
+                self._config[config_key] = value
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get configuration value"""
+        return self._config.get(key, default)
+
+
+# Initialize config
+config = Config()
+
+# Initialize Flask app with dynamic configuration
+app = Flask(__name__)
+app.config["SECRET_KEY"] = config.get("secret_key", os.urandom(24).hex())
+app.config["MAX_CONTENT_LENGTH"] = int(
+    config.get("max_content_length", 16 * 1024 * 1024)
+)
+app.config["UPLOAD_FOLDER"] = config.get("upload_folder", "uploads")
+
+
+class DefectDetectionApp:
+    def __init__(self):
+        self.model_path = config.get("model_path", "models/latest")
+        self.confidence_threshold = float(config.get("confidence_threshold", 0.5))
+        self.upload_folder = config.get("upload_folder", "uploads")
+        self.allowed_extensions = set(
+            config.get("allowed_extensions", ["png", "jpg", "jpeg"])
+        )
+        Path(self.upload_folder).mkdir(parents=True, exist_ok=True)
+        Path(self.model_path).parent.mkdir(parents=True, exist_ok=True)
+
+    def allowed_file(self, filename: str) -> bool:
+        return (
+            "." in filename
+            and filename.rsplit(".", 1)[1].lower() in self.allowed_extensions
+        )
+
+
+# Initialize defect detection app
+defect_app = DefectDetectionApp()
+>>>>>>> Stashed changes
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -153,14 +217,11 @@ def save_prediction_history(image_path, result):
     """Save prediction results to history."""
     history_dir = Path("monitoring/predictions")
     history_dir.mkdir(parents=True, exist_ok=True)
-
     history_file = history_dir / "history.json"
     history = []
-
     if history_file.exists():
         with open(history_file, "r") as f:
             history = json.load(f)
-
     history.append(
         {
             "timestamp": datetime.utcnow().isoformat(),
@@ -168,7 +229,6 @@ def save_prediction_history(image_path, result):
             "result": result,
         }
     )
-
     with open(history_file, "w") as f:
         json.dump(history, f, indent=2)
 
@@ -195,14 +255,11 @@ def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
-
         user = users.get(username)
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
             return redirect(url_for("index"))
-
         return "Invalid username or password"
-
     return render_template("login.html")
 
 
@@ -217,6 +274,7 @@ def logout():
 @app.route("/predict", methods=["POST"])
 @login_required
 def predict():
+<<<<<<< Updated upstream
     """Handle single image prediction."""
     try:
         if "file" not in request.files:
@@ -265,6 +323,20 @@ def predict():
                 logger.error(f"Error making prediction: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
+=======
+    try:
+        image_file = request.files["image"]
+        logger.debug(f"Received image file: {image_file.filename}")
+        processed_image = process_image(image_file)
+        prediction = model.predict(processed_image)
+        logger.debug(f"Prediction result: {prediction}")
+        result = prediction[0]
+        if isinstance(result, (int, float)):
+            return jsonify({"prediction": result}), 200
+        else:
+            logger.error("Invalid prediction format")
+            return jsonify({"error": "Invalid prediction format"}), 400
+>>>>>>> Stashed changes
     except Exception as e:
         ERROR_COUNT.labels(error_type="prediction").inc()
         logger.error(f"Error in prediction endpoint: {str(e)}")
@@ -289,6 +361,7 @@ def history():
 @login_required
 def get_history():
     """Get prediction history."""
+<<<<<<< Updated upstream
     history_file = Path("monitoring/predictions/history.json")
     if not history_file.exists():
         return jsonify([])
@@ -297,6 +370,18 @@ def get_history():
         history = json.load(f)
 
     return jsonify(history)
+=======
+    try:
+        history_file = Path("monitoring/predictions/history.json")
+        if not history_file.exists():
+            return jsonify([])
+        with open(history_file, "r") as f:
+            history = json.load(f)
+        return jsonify(history)
+    except Exception as e:
+        logger.error(f"Error loading history: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+>>>>>>> Stashed changes
 
 
 @app.route("/dashboard")
@@ -373,6 +458,7 @@ def status():
 @login_required
 def batch_predict():
     """Endpoint for making predictions on multiple images."""
+<<<<<<< Updated upstream
     try:
         if "files[]" not in request.files:
             return jsonify({"error": "No files uploaded"}), 400
@@ -432,6 +518,37 @@ def batch_predict():
     except Exception as e:
         ERROR_COUNT.labels(error_type="batch_prediction").inc()
         return jsonify({"error": str(e)}), 500
+=======
+    if "images" not in request.files:
+        return jsonify({"error": "No images uploaded"}), 400
+    files = request.files.getlist("images")
+    results = []
+    for file in files:
+        if not defect_app.allowed_file(file.filename):
+            continue
+        try:
+            filename = secure_filename(file.filename)
+            temp_path = os.path.join("/tmp", filename)
+            file.save(temp_path)
+            img = load_image(temp_path)
+            img = resize_image(img)
+            img = normalize_image(img)
+            img = np.expand_dims(img, axis=0)
+            prediction = float(model.predict(img)[0, 0])
+            os.remove(temp_path)
+            results.append(
+                {
+                    "filename": file.filename,
+                    "prediction": "defect" if prediction > 0.5 else "no_defect",
+                    "confidence": float(
+                        prediction if prediction > 0.5 else 1 - prediction
+                    ),
+                }
+            )
+        except Exception as e:
+            results.append({"filename": file.filename, "error": str(e)})
+    return jsonify({"results": results}), 200
+>>>>>>> Stashed changes
 
 
 def allowed_file(filename):
@@ -446,11 +563,16 @@ def allowed_file(filename):
 start_time = time.time()
 
 if __name__ == "__main__":
-    # Start Prometheus metrics server
     start_http_server(8000)
+<<<<<<< Updated upstream
 
     # Load model on startup
     load_model_safe()
 
     # Run the Flask app
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+=======
+    load_model_safe()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+>>>>>>> Stashed changes

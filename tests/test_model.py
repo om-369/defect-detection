@@ -4,17 +4,15 @@ import sys
 import os
 from pathlib import Path
 
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 import numpy as np
 import tensorflow as tf
 import pytest
 
-from src.config import IMG_SIZE
-from src.models.model import create_model
-from src.preprocessing import create_dataset
-
-# Add project root to path
-project_root = str(Path(__file__).resolve().parent.parent)
-sys.path.insert(0, project_root)
+from config import IMG_SIZE, MODEL_CONFIG
+from models.model import create_model
+from preprocessing import create_dataset
 
 
 @pytest.fixture
@@ -62,7 +60,10 @@ def test_model_prediction(test_model):
     predictions = test_model.predict(test_input)
 
     # Check prediction shape and range
-    assert predictions.shape == (batch_size, 1)
+    assert (
+        predictions.shape[0] == batch_size
+        and predictions.shape[1] == MODEL_CONFIG['num_classes']
+    )
     assert np.all(predictions >= 0) and np.all(predictions <= 1)
 
 

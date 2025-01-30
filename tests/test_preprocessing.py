@@ -1,11 +1,14 @@
 """Test suite for data preprocessing functions."""
 
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 import tensorflow as tf
 import pytest
-from pathlib import Path
 
-from src.config import IMG_SIZE
-from src.preprocessing import create_dataset, preprocess_image
+from config import IMG_SIZE
+from preprocessing import create_dataset, preprocess_image
 
 
 @pytest.fixture(scope="session")
@@ -16,9 +19,9 @@ def test_data_dir():
     no_defect_dir = test_dir / "no_defect"
 
     # Create test image
-    img = Image.new("RGB", (100, 100), color="red")
-    img.save(defect_dir / "test_image.jpg")
-    img.save(no_defect_dir / "test_image.jpg")
+    img = tf.zeros((100, 100, 3), dtype=tf.uint8)
+    tf.io.write_file(str(defect_dir / "test_image.jpg"), tf.io.encode_jpeg(img))
+    tf.io.write_file(str(no_defect_dir / "test_image.jpg"), tf.io.encode_jpeg(img))
 
     return test_dir
 

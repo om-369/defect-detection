@@ -10,9 +10,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 env:
   PYTHON_VERSION: '3.12'
@@ -103,7 +103,7 @@ jobs:
     name: Deploy to Cloud Run
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     steps:
       - name: Login to Google Cloud
         uses: google-github-actions/auth@v1

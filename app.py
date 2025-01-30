@@ -8,39 +8,37 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
+from typing import Dict
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
 import yaml
-from flask import (
-    Flask,
-    jsonify,
-    redirect,
-    render_template,
-    request,
-    send_file,
-    session,
-    url_for,
-)
-from flask_login import (
-    LoginManager,
-    UserMixin,
-    current_user,
-    login_required,
-    login_user,
-    logout_user,
-)
+from flask import Flask
+from flask import jsonify
+from flask import redirect
+from flask import render_template
+from flask import request
+from flask import send_file
+from flask import session
+from flask import url_for
+from flask_login import LoginManager
+from flask_login import UserMixin
+from flask_login import current_user
+from flask_login import login_required
+from flask_login import login_user
+from flask_login import logout_user
 from google.cloud import storage
-from prometheus_client import (
-    CONTENT_TYPE_LATEST,
-    Counter,
-    Histogram,
-    generate_latest,
-    start_http_server,
-)
+from prometheus_client import CONTENT_TYPE_LATEST
+from prometheus_client import Counter
+from prometheus_client import Histogram
+from prometheus_client import generate_latest
+from prometheus_client import start_http_server
 from pythonjsonlogger import jsonlogger
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
+from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
 

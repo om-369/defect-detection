@@ -6,7 +6,9 @@ import smtplib
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Any, Dict, List
+from typing import Any
+from typing import Dict
+from typing import List
 
 logger = logging.getLogger(__name__)
 

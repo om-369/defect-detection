@@ -1,7 +1,11 @@
 """Visualization utilities for the defect detection project."""
 
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Tuple
+from datetime import datetime
+from datetime import timedelta
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +15,9 @@ import plotly.graph_objects as go
 import seaborn as sns
 import tensorflow as tf
 from plotly.subplots import make_subplots
-from sklearn.metrics import auc, confusion_matrix, roc_curve
+from sklearn.metrics import auc
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import roc_curve
 
 
 def plot_training_history(history):

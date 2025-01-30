@@ -32,17 +32,14 @@ env/
 *.swo
 
 # Project specific
-data/raw/
-data/processed/
-data/labeled/
-!data/test/
+!src/
+data/
 *.h5
 *.hdf5
 *.pkl
 *.pth
 logs/
 checkpoints/
-src/
 
 # Environment variables
 .env
@@ -50,12 +47,10 @@ src/
 
 # Docker
 .docker/
+docker-compose.override.yml
 
 # Coverage
+coverage/
 .coverage
 coverage.xml
 htmlcov/
-
-# Secrets setup
-secrets_setup.txt
-GoogleCloudSDKInstaller.exe

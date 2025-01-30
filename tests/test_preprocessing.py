@@ -13,7 +13,7 @@ project_root = str(Path(__file__).resolve().parent.parent)
 sys.path.insert(0, project_root)
 
 from src.config import IMG_SIZE
-from src.data.preprocessing import preprocess_image, resize_image
+from src.preprocessing import preprocess_image, resize_image, create_dataset, augment_image
 
 
 @pytest.fixture

@@ -1,0 +1,26 @@
+# Environment Configuration Template
+# Copy this file to environment.yml and fill in your values
+
+# Application Settings
+APP_SECRET_KEY: "your-secure-secret-key"
+DEBUG: false
+ENVIRONMENT: "production"  # or "development", "staging"
+
+# Docker Configuration
+DOCKER_REGISTRY: "your-registry"
+DOCKER_IMAGE: "defect-detection"
+DOCKER_TAG: "latest"
+
+# Google Cloud Platform
+GCP_PROJECT_ID: "your-project-id"
+GCP_REGION: "your-region"
+GCP_SERVICE_NAME: "defect-detection"
+
+# Model Settings
+MODEL_VERSION: "v1"
+MODEL_PATH: "models/latest"
+CONFIDENCE_THRESHOLD: 0.5
+
+# Monitoring
+ENABLE_MONITORING: true
+HEALTH_CHECK_INTERVAL: 300  # seconds

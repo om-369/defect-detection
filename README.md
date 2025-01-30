@@ -94,6 +94,21 @@ Content-Type: multipart/form-data
 Body: image=@image.jpg
 ```
 
+## Security and Configuration
+
+### Environment Setup
+1. Copy `config/environment.template.yml` to `config/environment.yml`
+2. Fill in your environment-specific values in `environment.yml`
+3. Never commit actual secrets or credentials to version control
+4. Use GitHub Secrets for CI/CD pipeline credentials
+
+### Security Best Practices
+- Keep all API keys and secrets in environment variables
+- Use service accounts with minimal required permissions
+- Regularly rotate credentials and API keys
+- Enable security scanning in CI/CD pipeline
+- Follow the principle of least privilege for all service accounts
+
 ## Deployment
 
 The application is automatically deployed to Google Cloud Run when changes are pushed to the main branch.

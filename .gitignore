@@ -58,6 +58,20 @@ uploads/*
 monitoring/health_checks/
 *.log
 
+# Security and secrets
+secrets_setup.txt
+*.key
+*.pem
+*.env
+.env
+.env.*
+credentials.json
+service-account.json
+keyfile.json
+*secret*
+*password*
+*credential*
+
 # Temporary files
 *.tmp
 *.temp

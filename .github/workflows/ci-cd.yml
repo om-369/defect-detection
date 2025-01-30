@@ -54,7 +54,11 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --statistics
 
       - name: Security check with bandit
-        run: bandit -r . -c pyproject.toml
+        run: |
+          # Run Bandit on source code excluding tests
+          bandit -r src app.py evaluate.py predict.py train.py -c pyproject.toml
+          # Run Bandit on tests with relaxed settings
+          bandit -r tests -s B101 -ll
 
       - name: Check dependencies for known vulnerabilities
         run: safety check

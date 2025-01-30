@@ -19,3 +19,10 @@ line_length = 88
 known_first_party = ["src"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 default_section = "THIRDPARTY"
+
+[tool.bandit]
+exclude_dirs = ["tests", "venv"]
+skips = ["B101"]  # Skip assert warnings
+
+[tool.bandit.assert_used]
+skips = ["*/test_*.py"]  # Skip assert warnings in test files

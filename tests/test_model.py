@@ -1,6 +1,7 @@
 """Test suite for model functionality."""
 
 import sys
+import os
 from pathlib import Path
 
 import numpy as np
@@ -25,7 +26,9 @@ def test_model():
 @pytest.fixture
 def test_data_dir():
     """Get path to test data directory."""
-    return Path(__file__).resolve().parent / "data" / "test_images"
+    test_data_dir = Path(__file__).resolve().parent / "data" / "test_images"
+    test_data_dir = os.path.abspath(test_data_dir).replace('\\', '/')
+    return test_data_dir
 
 
 def test_model_creation(test_model):
@@ -45,7 +48,7 @@ def test_model_compilation(test_model):
     # Check if model is compiled
     assert test_model.optimizer is not None
     assert test_model.loss is not None
-    assert "binary_accuracy" in test_model.metrics_names
+    assert any(metric.name == 'binary_accuracy' for metric in test_model.metrics)
 
 
 def test_model_prediction(test_model):
@@ -68,7 +71,7 @@ def test_model_training(test_model, test_data_dir):
     # Create small test dataset
     batch_size = 4
     test_dataset = create_dataset(
-        str(test_data_dir), batch_size=batch_size, shuffle=True
+        test_data_dir, batch_size=batch_size, shuffle=True
     )
 
     # Train for one epoch

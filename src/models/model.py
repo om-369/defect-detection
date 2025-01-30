@@ -37,7 +37,7 @@ def create_model(num_classes: int = MODEL_CONFIG["num_classes"]) -> tf.keras.Mod
     model.compile(
         optimizer='adam',
         loss='binary_crossentropy',
-        metrics=[tf.keras.metrics.BinaryAccuracy(name='accuracy')]
+        metrics=[tf.keras.metrics.BinaryAccuracy(name='binary_accuracy')]
     )
 
     return model

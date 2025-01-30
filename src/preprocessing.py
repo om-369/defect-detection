@@ -18,8 +18,18 @@ def preprocess_image(image_path: Union[str, Path]) -> tf.Tensor:
         Preprocessed image tensor.
     """
     # Read and decode image
-    image = tf.io.read_file(str(image_path))
-    image = tf.io.decode_image(image, channels=3, expand_animations=False)
+    image_path = tf.convert_to_tensor(image_path, dtype=tf.string)
+    image_path = tf.squeeze(image_path)
+    image = tf.io.read_file(image_path)
+
+    # Validate image format
+    image = tf.cond(
+        tf.image.is_jpeg(image),
+        lambda: tf.image.decode_jpeg(image, channels=3),
+        lambda: tf.image.decode_png(image, channels=3)
+    )
+    if image.dtype != tf.uint8:
+        image = tf.image.convert_image_dtype(image, tf.uint8)
 
     # Convert to float32 and normalize to [0, 1]
     image = tf.cast(image, tf.float32) / 255.0

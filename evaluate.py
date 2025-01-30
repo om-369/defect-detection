@@ -16,6 +16,7 @@ from sklearn.metrics import (
 from src.config import MODEL_CONFIG
 from src.data.preprocessing import create_dataset
 
+
 def evaluate_model(model_path="models/latest", test_data_dir="data/labeled"):
     """Evaluate the model on test data."""
     print("Loading model...")

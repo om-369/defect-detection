@@ -43,6 +43,7 @@ from pythonjsonlogger import jsonlogger
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
+
 # Configuration Management
 class Config:
     _instance = None
@@ -50,12 +51,12 @@ class Config:
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(Config, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance._load_config()
         return cls._instance
 
     def _load_config(self):
-        """Load configuration from environment.yml file and environment variables"""
+        """Load configuration from environment.yml file and environment variables."""
         config_path = Path("config/environment.yml")
         if config_path.exists():
             with open(config_path) as f:
@@ -67,7 +68,7 @@ class Config:
                 self._config[config_key] = value
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Get configuration value"""
+        """Get configuration value."""
         return self._config.get(key, default)
 
 

@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+env/
 build/
 develop-eggs/
 dist/
@@ -20,35 +21,77 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
 venv/
 ENV/
-env/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
 
 # Project specific
-data/
-!data/test/
-*.h5
-*.hdf5
-*.pkl
-*.pth
-logs/
-checkpoints/
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+models/*
+!models/.gitkeep
+logs/*
+!logs/.gitkeep
+uploads/*
+!uploads/.gitkeep
+monitoring/health_checks/
+*.log
 
-# Environment variables
-.env
-.env.*
+# Temporary files
+*.tmp
+*.temp
+*.bak
+.DS_Store
 
-# Docker
-.docker/
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Coverage
-.coverage
-coverage.xml
-htmlcov/
+# Distribution / packaging
+.Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+bin/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# Installer files
+GoogleCloudSDKInstaller.exe
+*.msi
+*.exe
+*.zip

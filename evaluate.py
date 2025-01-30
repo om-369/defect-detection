@@ -5,8 +5,13 @@ from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
-from sklearn.metrics import (accuracy_score, f1_score, precision_score,
-                             recall_score, roc_auc_score)
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 from src.config import MODEL_CONFIG
 from src.data.preprocessing import create_dataset

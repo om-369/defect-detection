@@ -12,12 +12,31 @@ from typing import Any, Dict, Tuple
 
 import numpy as np
 import tensorflow as tf
-from flask import (Flask, jsonify, redirect, render_template, request,
-                   send_file, session, url_for)
-from flask_login import (LoginManager, UserMixin, current_user, login_required,
-                         login_user, logout_user)
-from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Histogram,
-                               generate_latest, start_http_server)
+from flask import (
+    Flask,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    session,
+    url_for,
+)
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Histogram,
+    generate_latest,
+    start_http_server,
+)
 from pythonjsonlogger import jsonlogger
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -166,60 +185,39 @@ def logout():
     return redirect(url_for("index"))
 
 
-@app.route("/predict", methods=["POST"])
+@app.route('/predict', methods=['POST'])
 @login_required
 def predict():
+    if error_message:
+        logger.error(f"Error message: {error_message}")
+        return jsonify({"error": error_message}), 500
+
     try:
-        if "file" not in request.files:
-            logger.error("No file part in request")
-            return jsonify({"error": "No file part"}), 400
+        image_file = request.files['image']
+        logger.debug(f"Received image file: {image_file.filename}")
 
-        file = request.files["file"]
-        if file.filename == "":
-            logger.error("No selected file")
-            return jsonify({"error": "No selected file"}), 400
+        processed_image, image_error = process_image(image_file)
 
-        if not allowed_file(file.filename):
-            logger.error(f"Invalid file type: {file.filename}")
-            return (
-                jsonify({"error": "Invalid file type. Allowed types: png, jpg, jpeg"}),
-                400,
-            )
+        if image_error:
+            logger.error(f"Image processing error: {image_error}")
+            return jsonify({"error": image_error}), 400
 
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        file.save(filepath)
+        # Assuming you have a function to make a prediction
+        prediction = model.predict(processed_image)  # Ensure this returns a valid result
+        logger.debug(f"Prediction result: {prediction}")
 
-        # Process image and make prediction
-        with PREDICTION_LATENCY.time():
-            PREDICTION_REQUEST_COUNT.inc()
-            try:
-                image_data = tf.io.read_file(filepath)
-                image_data = process_image(image_data)
-                with model_lock:
-                    if model is None:
-                        load_model_safe()
-                    prediction = model.predict(image_data)
+        result = prediction[0]  # Adjust based on your model output
 
-                result = {
-                    "defect_probability": float(prediction[0][0]),
-                    "timestamp": datetime.now().isoformat(),
-                }
-
-                # Save prediction to history
-                save_prediction_history(filepath, result)
-
-                return jsonify(result)
-
-            except Exception as e:
-                PREDICTION_ERROR_COUNT.inc()
-                logger.error(f"Prediction error: {str(e)}")
-                return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
+        # Ensure result is a number before calling toFixed
+        if isinstance(result, (int, float)):
+            return jsonify({"prediction": result}), 200
+        else:
+            logger.error("Invalid prediction format")
+            return jsonify({"error": "Invalid prediction format"}), 400
 
     except Exception as e:
-        ERROR_COUNT.labels(error_type="predict_endpoint").inc()
         logger.error(f"Error in predict endpoint: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)}), 400
 
 
 @app.route("/batch", methods=["GET"])

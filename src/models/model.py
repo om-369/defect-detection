@@ -6,16 +6,14 @@ from pathlib import Path
 import tensorflow as tf
 from tensorflow.keras import layers, models
 
-# Add project root to path
-sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
-from config import IMG_SIZE, MODEL_CONFIG
+from src.config import IMG_SIZE, MODEL_CONFIG
 
 
 def create_model(num_classes: int = MODEL_CONFIG["num_classes"]) -> tf.keras.Model:
     """Create and return the model architecture."""
     # Load pre-trained MobileNetV2 instead of ResNet50 (lighter model)
     base_model = tf.keras.applications.MobileNetV2(
-        weights="imagenet", include_top=False, input_shape=(*IMG_SIZE, 3)
+        weights="imagenet", include_top=False, input_shape=(IMG_SIZE, IMG_SIZE, 3)
     )
 
     # Freeze only the first 100 layers
@@ -23,7 +21,7 @@ def create_model(num_classes: int = MODEL_CONFIG["num_classes"]) -> tf.keras.Mod
         layer.trainable = False
 
     # Create new model on top
-    inputs = tf.keras.Input(shape=(*IMG_SIZE, 3))
+    inputs = tf.keras.Input(shape=(IMG_SIZE, IMG_SIZE, 3))
     x = tf.keras.applications.mobilenet_v2.preprocess_input(inputs)
 
     # Pass inputs through base model

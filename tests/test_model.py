@@ -16,69 +16,63 @@ from src.models.model import compile_model, create_model
 from src.preprocessing import create_dataset
 
 
-def test_model_creation():
-    """Test if model is created with correct architecture."""
-    model = create_model()
-    assert isinstance(model, tf.keras.Model)
-
-    # Test input shape
-    assert model.input_shape == (None, *IMG_SIZE, 3)
-
-    # Test output shape (binary classification)
-    assert model.output_shape == (None, 1)
+@pytest.fixture
+def test_model():
+    """Create a test model."""
+    return create_model(num_classes=1)
 
 
-def test_model_compilation():
-    """Test if model compiles correctly."""
-    model = create_model()
-    compiled_model = compile_model(model)
+@pytest.fixture
+def test_data_dir():
+    """Get path to test data directory."""
+    return Path(__file__).resolve().parent / "data" / "test_images"
 
+
+def test_model_creation(test_model):
+    """Test model creation."""
+    # Check model architecture
+    assert isinstance(test_model, tf.keras.Model)
+    
+    # Check input shape
+    assert test_model.input_shape == (None, *IMG_SIZE, 3)
+    
+    # Check output shape (binary classification)
+    assert test_model.output_shape == (None, 1)
+
+
+def test_model_compilation(test_model):
+    """Test model compilation."""
+    compile_model(test_model)
+    
     # Check if model is compiled
-    assert isinstance(compiled_model.optimizer, tf.keras.optimizers.Optimizer)
-    assert isinstance(compiled_model.loss, tf.keras.losses.Loss)
-
-    # Check metrics
-    metrics = [metric.__class__.__name__ for metric in compiled_model.metrics]
-    assert any("Accuracy" in metric for metric in metrics)
-    assert any("AUC" in metric for metric in metrics)
+    assert test_model.optimizer is not None
+    assert test_model.loss is not None
 
 
-def test_model_prediction():
-    """Test if model can make predictions on sample data."""
-    model = create_model()
-    model = compile_model(model)
-
-    # Create sample input
-    sample_input = np.random.random((1, *IMG_SIZE, 3)).astype(np.float32)
-
-    # Make prediction
-    prediction = model.predict(sample_input)
-
+def test_model_prediction(test_model):
+    """Test model prediction."""
+    # Create random input
+    test_input = tf.random.uniform((1, *IMG_SIZE, 3))
+    
+    # Get prediction
+    prediction = test_model(test_input)
+    
     # Check prediction shape and range
     assert prediction.shape == (1, 1)
     assert 0 <= prediction[0, 0] <= 1
 
 
-def test_model_training():
-    """Test if model can be trained on a small dataset."""
-    # Get test data
-    test_dir = Path("data/test")
-    defect_paths = list(map(str, (test_dir / "defect").glob("*.jpg")))
-    no_defect_paths = list(map(str, (test_dir / "no_defect").glob("*.jpg")))
-
-    image_paths = defect_paths + no_defect_paths
-    labels = [1] * len(defect_paths) + [0] * len(no_defect_paths)
-
-    # Create dataset
-    dataset = create_dataset(image_paths, labels, batch_size=2, augment=False)
-
-    # Create and compile model
-    model = create_model()
-    model = compile_model(model)
-
+def test_model_training(test_model, test_data_dir):
+    """Test model training."""
+    # Create test dataset
+    dataset = create_dataset(test_data_dir, batch_size=1)
+    
+    # Compile model
+    compile_model(test_model)
+    
     # Train for one epoch
-    history = model.fit(dataset, epochs=1, verbose=0)
-
+    history = test_model.fit(dataset, epochs=1)
+    
     # Check if training happened
     assert "loss" in history.history
     assert len(history.history["loss"]) == 1

@@ -27,6 +27,7 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install black isort flake8 bandit safety pytest pytest-cov
           pip install -r requirements.txt
+          pip install -e .
           
       - name: Check code formatting
         run: |
@@ -46,7 +47,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pytest tests/ --cov=. --cov-report=xml
+          PYTHONPATH=$PYTHONPATH:$(pwd) pytest tests/ --cov=. --cov-report=xml
 
   build:
     name: Build and Push Docker Image

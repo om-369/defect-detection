@@ -23,11 +23,10 @@ TEST_SPLIT = 0.1
 
 # Model configuration
 MODEL_CONFIG = {
-    "backbone": "resnet50",
-    "weights": "imagenet",
-    "num_classes": 2,  # Binary classification: defect/no-defect
-    "learning_rate": 1e-5,  # Reduced learning rate
-    "epochs": 20,  # Fewer epochs for small dataset
+    "num_classes": 1,  # Binary classification: defect or no defect
+    "batch_size": 32,
+    "epochs": 10,
+    "learning_rate": 0.001,
 }
 
 # Training configuration

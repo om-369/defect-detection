@@ -1,11 +1,12 @@
 """Setup script for the defect-detection package."""
 
-from setuptools import find_packages, setup
+from setuptools import setup, find_packages
 
 setup(
     name="defect-detection",
-    version="0.1.0",
-    packages=find_packages(),
+    version="0.1",
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     install_requires=[
         "flask>=2.0.0",
         "numpy>=1.19.2",

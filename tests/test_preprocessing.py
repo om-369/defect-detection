@@ -2,34 +2,52 @@
 
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
+import pytest
 import tensorflow as tf
+
+# Add the project root to the Python path
+project_root = str(Path(__file__).resolve().parent.parent)
+sys.path.append(project_root)
+
 import pytest
 
-from config import IMG_SIZE
-from preprocessing import create_dataset, preprocess_image
+from src.config import IMG_SIZE
+from src.preprocessing import create_dataset, preprocess_image
 
 
 @pytest.fixture(scope="session")
-def test_data_dir():
-    """Create and return test data directory."""
-    test_dir = Path(__file__).resolve().parent / "data" / "test_images"
+def test_data_dir(tmp_path_factory):
+    """Create test data directory with sample images."""
+    test_dir = tmp_path_factory.mktemp("test_images")
+    
+    # Create subdirectories
     defect_dir = test_dir / "defect"
     no_defect_dir = test_dir / "no_defect"
-
-    # Create test image
-    img = tf.zeros((100, 100, 3), dtype=tf.uint8)
-    tf.io.write_file(str(defect_dir / "test_image.jpg"), tf.io.encode_jpeg(img))
-    tf.io.write_file(str(no_defect_dir / "test_image.jpg"), tf.io.encode_jpeg(img))
-
+    defect_dir.mkdir()
+    no_defect_dir.mkdir()
+    
+    # Create test images using TensorFlow
+    img = tf.random.uniform((IMG_SIZE, IMG_SIZE, 3), maxval=255, dtype=tf.int32)
+    img = tf.cast(img, tf.uint8)
+    
+    # Save images
+    for i in range(2):
+        tf.io.write_file(
+            str(defect_dir / f"defect_{i}.jpg"),
+            tf.io.encode_jpeg(img)
+        )
+        tf.io.write_file(
+            str(no_defect_dir / f"no_defect_{i}.jpg"),
+            tf.io.encode_jpeg(img)
+        )
+    
     return test_dir
 
 
 @pytest.fixture
 def test_image_path(test_data_dir):
     """Get path to a test image."""
-    return str(test_data_dir / "defect" / "test_image.jpg")
+    return str(test_data_dir / "defect" / "defect_0.jpg")
 
 
 def test_image_loading(test_image_path):

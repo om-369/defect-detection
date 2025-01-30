@@ -8,7 +8,7 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -46,26 +46,31 @@ from werkzeug.utils import secure_filename
 
 # Configuration Management
 class Config:
-    _instance = None
+    """Configuration management singleton class."""
+
+    _instance: Optional["Config"] = None
     _config: Dict[str, Any] = {}
 
-    def __new__(cls):
+    def __new__(cls) -> "Config":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._load_config()
         return cls._instance
 
-    def _load_config(self):
+    def _load_config(self) -> None:
         """Load configuration from environment.yml file and environment variables."""
-        config_path = Path("config/environment.yml")
-        if config_path.exists():
-            with open(config_path) as f:
+        try:
+            with open("config/environment.yml", "r") as f:
                 self._config = yaml.safe_load(f)
-        env_prefix = "APP_"
-        for key, value in os.environ.items():
-            if key.startswith(env_prefix):
-                config_key = key[len(env_prefix) :].lower()
-                self._config[config_key] = value
+        except FileNotFoundError:
+            logging.warning("No environment.yml file found, using defaults")
+            self._config = {}
+
+        # Override with environment variables
+        for key in self._config:
+            env_value = os.environ.get(key.upper())
+            if env_value:
+                self._config[key] = env_value
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value."""

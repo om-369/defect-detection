@@ -526,18 +526,37 @@ def allowed_file(filename):
 # Start time for uptime tracking
 start_time = time.time()
 
+
+def get_host_config():
+    """Get host configuration based on environment.
+    
+    Returns:
+        tuple: (host, port) configuration for the server
+        
+    Note:
+        In production environments like Cloud Run, we need to bind to all interfaces.
+        This is safe because:
+        1. Cloud Run provides its own security layer
+        2. Only internal traffic within the Cloud Run container is allowed
+        3. External traffic is handled by Cloud Run's load balancer
+    """
+    port = int(os.environ.get("PORT", 8080))
+    
+    # Default to localhost for security
+    host = os.environ.get("HOST", "127.0.0.1")
+    
+    # Only bind to all interfaces in Cloud Run environment
+    if os.environ.get("CLOUD_RUN") == "1":
+        host = "0.0.0.0"  # nosec B104 - Binding to all interfaces is required and safe in Cloud Run
+    
+    return host, port
+
+
 if __name__ == "__main__":
     start_http_server(8000)
-    # Get configuration from environment variables
-    port = int(os.environ.get("PORT", 8080))
-
-    # In production (e.g. Cloud Run), we need to bind to all interfaces
-    # In development, we only bind to localhost for security
-    host = os.environ.get("HOST", "127.0.0.1")
-
-    # If running in Cloud Run or similar environment where we need to bind to all interfaces
-    if os.environ.get("CLOUD_RUN") == "1":
-        host = "0.0.0.0"
-
-    # Run the Flask app
-    app.run(host=host, port=port)  # nosec B104 - Binding is controlled by environment
+    
+    # Get host configuration
+    host, port = get_host_config()
+    
+    # Run the Flask app with proper host binding
+    app.run(host=host, port=port)

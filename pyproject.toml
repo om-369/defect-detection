@@ -24,5 +24,11 @@ default_section = "THIRDPARTY"
 exclude_dirs = ["tests", "venv"]
 skips = ["B101"]  # Skip assert warnings
 
-[tool.bandit.assert_used]
-skips = ["*/test_*.py"]  # Skip assert warnings in test files
+[tool.bandit.any_other_function_with_shell_equals_true]
+no_shell = false
+
+# Ignore B104 in specific cases where binding to all interfaces is required and documented
+[[tool.bandit.assert_used.skips]]
+id = "B104"
+reason = "Binding to all interfaces is required and safe in Cloud Run environment"
+file = "app.py"

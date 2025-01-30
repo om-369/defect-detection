@@ -529,10 +529,10 @@ start_time = time.time()
 
 def get_host_config():
     """Get host configuration based on environment.
-    
+
     Returns:
         tuple: (host, port) configuration for the server
-        
+
     Note:
         In production environments like Cloud Run, we need to bind to all interfaces.
         This is safe because:
@@ -541,22 +541,22 @@ def get_host_config():
         3. External traffic is handled by Cloud Run's load balancer
     """
     port = int(os.environ.get("PORT", 8080))
-    
+
     # Default to localhost for security
     host = os.environ.get("HOST", "127.0.0.1")
-    
+
     # Only bind to all interfaces in Cloud Run environment
     if os.environ.get("CLOUD_RUN") == "1":
         host = "0.0.0.0"  # nosec B104 - Binding to all interfaces is required and safe in Cloud Run
-    
+
     return host, port
 
 
 if __name__ == "__main__":
     start_http_server(8000)
-    
+
     # Get host configuration
     host, port = get_host_config()
-    
+
     # Run the Flask app with proper host binding
     app.run(host=host, port=port)

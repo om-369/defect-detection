@@ -1,0 +1,24 @@
+# Development Configuration
+
+# Application Settings
+debug: true
+environment: "development"
+secret_key: "dev-secret-key-replace-in-production"
+max_content_length: 16777216  # 16MB
+
+# Upload Settings
+upload_folder: "uploads"
+allowed_extensions: ["png", "jpg", "jpeg"]
+
+# Model Settings
+model_path: "models/latest"
+confidence_threshold: 0.5
+
+# Monitoring
+enable_monitoring: true
+health_check_interval: 300  # seconds
+
+# Database Settings
+db_host: "localhost"
+db_port: 5432
+db_name: "defect_detection"

@@ -39,12 +39,64 @@ from prometheus_client import (
 )
 from pythonjsonlogger import jsonlogger
 from werkzeug.security import check_password_hash, generate_password_hash
+import yaml
 
-# Initialize Flask app
+# Configuration Management
+class Config:
+    _instance = None
+    _config: Dict[str, Any] = {}
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(Config, cls).__new__(cls)
+            cls._instance._load_config()
+        return cls._instance
+
+    def _load_config(self):
+        """Load configuration from environment.yml file and environment variables"""
+        config_path = Path("config/environment.yml")
+        
+        # Load from YAML if exists
+        if config_path.exists():
+            with open(config_path) as f:
+                self._config = yaml.safe_load(f)
+        
+        # Override with environment variables
+        env_prefix = "APP_"
+        for key, value in os.environ.items():
+            if key.startswith(env_prefix):
+                config_key = key[len(env_prefix):].lower()
+                self._config[config_key] = value
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get configuration value"""
+        return self._config.get(key, default)
+
+# Initialize config
+config = Config()
+
+# Initialize Flask app with dynamic configuration
 app = Flask(__name__)
-app.secret_key = os.environ.get(
-    "SECRET_KEY", "your-secret-key"
-)  # Change this in production
+app.config["SECRET_KEY"] = config.get("secret_key", os.urandom(24).hex())
+app.config["MAX_CONTENT_LENGTH"] = int(config.get("max_content_length", 16 * 1024 * 1024))
+app.config["UPLOAD_FOLDER"] = config.get("upload_folder", "uploads")
+
+class DefectDetectionApp:
+    def __init__(self):
+        self.model_path = config.get("model_path", "models/latest")
+        self.confidence_threshold = float(config.get("confidence_threshold", 0.5))
+        self.upload_folder = config.get("upload_folder", "uploads")
+        self.allowed_extensions = set(config.get("allowed_extensions", ["png", "jpg", "jpeg"]))
+        
+        # Ensure directories exist
+        Path(self.upload_folder).mkdir(parents=True, exist_ok=True)
+        Path(self.model_path).parent.mkdir(parents=True, exist_ok=True)
+
+    def allowed_file(self, filename: str) -> bool:
+        return "." in filename and filename.rsplit(".", 1)[1].lower() in self.allowed_extensions
+
+# Initialize defect detection app
+defect_app = DefectDetectionApp()
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -100,7 +152,7 @@ def load_model_safe():
     global model
     try:
         with model_lock:
-            model = tf.keras.models.load_model("models/model.h5")
+            model = tf.keras.models.load_model(defect_app.model_path)
         logger.info("Model loaded successfully")
         return True
     except Exception as e:
@@ -142,16 +194,6 @@ def save_prediction_history(image_path, result):
 
     with open(history_file, "w") as f:
         json.dump(history, f, indent=2)
-
-
-# File upload configuration
-UPLOAD_FOLDER = "uploads"
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
-
-# Ensure upload directory exists
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 @app.route("/")
@@ -322,7 +364,7 @@ def batch_predict():
 
     for file in files:
         # Check file type
-        if not allowed_file(file.filename):
+        if not defect_app.allowed_file(file.filename):
             continue
 
         try:
@@ -358,12 +400,6 @@ def batch_predict():
             results.append({"filename": file.filename, "error": str(e)})
 
     return jsonify({"results": results}), 200
-
-
-def allowed_file(filename):
-    """Check if file has an allowed extension."""
-    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def secure_filename(filename):

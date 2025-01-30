@@ -1,16 +1,8 @@
 """Test suite for data preprocessing functions."""
 
-import sys
-from pathlib import Path
-
-import numpy as np
-import pytest
 import tensorflow as tf
-from PIL import Image
-
-# Add project root to path
-project_root = str(Path(__file__).resolve().parent.parent)
-sys.path.insert(0, project_root)
+import pytest
+from pathlib import Path
 
 from src.config import IMG_SIZE
 from src.preprocessing import create_dataset, preprocess_image

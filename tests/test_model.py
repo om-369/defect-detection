@@ -12,8 +12,8 @@ project_root = str(Path(__file__).resolve().parent.parent)
 sys.path.insert(0, project_root)
 
 from src.config import IMG_SIZE
-from src.preprocessing import create_dataset
 from src.models.model import compile_model, create_model
+from src.preprocessing import create_dataset
 
 
 def test_model_creation():

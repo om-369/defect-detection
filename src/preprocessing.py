@@ -24,15 +24,11 @@ def preprocess_image(image_path: Union[str, Path]) -> tf.Tensor:
     # Convert to float32 and normalize to [0, 1]
     image = tf.cast(image, tf.float32) / 255.0
 
-    # Resize image using size as a list
-    size = tf.constant([IMG_SIZE, IMG_SIZE])
-    image = tf.image.resize(image, size)
+    # Resize image using size as a tuple
+    image = tf.image.resize(image, [IMG_SIZE, IMG_SIZE])
 
     # Ensure shape is correct
     image = tf.ensure_shape(image, [IMG_SIZE, IMG_SIZE, 3])
-
-    # Add batch dimension
-    image = tf.expand_dims(image, 0)
 
     return image
 
@@ -67,23 +63,27 @@ def create_dataset(
         raise ValueError(f"No images found in {data_dir}")
 
     # Create dataset
-    image_paths = defect_paths + no_defect_paths
-    labels = [1] * len(defect_paths) + [0] * len(no_defect_paths)
-
-    dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels))
+    dataset = tf.data.Dataset.list_files(str(Path(data_dir) / "*/*"))
 
     # Shuffle if requested
     if shuffle:
-        dataset = dataset.shuffle(buffer_size=len(image_paths))
+        dataset = dataset.shuffle(buffer_size=len(list(data_dir.glob("*/*"))))
 
     # Map preprocessing function
-    def process_path(path, label):
-        image = preprocess_image(path)[0]  # Remove batch dimension
-        return image, tf.cast(label, tf.float32)
+    def process_path(path):
+        # Extract label from path
+        label = tf.strings.regex_full_match(path, r'.*[\\/]defect[\\/].*')
+        label = tf.cast(label, tf.float32)
+        
+        # Process image
+        image = preprocess_image(path)
+        
+        return image, label
 
     dataset = dataset.map(process_path, num_parallel_calls=tf.data.AUTOTUNE)
 
     # Batch and prefetch
-    dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
     return dataset

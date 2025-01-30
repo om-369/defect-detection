@@ -43,7 +43,7 @@ def test_image_loading(test_image_path):
     loaded_img = preprocess_image(test_image_path)
 
     # Check if loaded image has correct shape and type
-    assert loaded_img.shape == (1, IMG_SIZE, IMG_SIZE, 3)
+    assert loaded_img.shape == (IMG_SIZE, IMG_SIZE, 3)
     assert loaded_img.dtype == tf.float32
     assert tf.reduce_max(loaded_img) <= 1.0
     assert tf.reduce_min(loaded_img) >= 0.0
@@ -55,7 +55,7 @@ def test_image_resizing(test_image_path):
     img = preprocess_image(test_image_path)
 
     # Check dimensions
-    assert img.shape == (1, IMG_SIZE, IMG_SIZE, 3)
+    assert img.shape == (IMG_SIZE, IMG_SIZE, 3)
 
 
 def test_image_normalization(test_image_path):

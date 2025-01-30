@@ -16,7 +16,7 @@ DATA_DIR.mkdir(exist_ok=True)
 MODEL_DIR.mkdir(exist_ok=True)
 
 # Data configuration
-IMG_SIZE = (224, 224)  # Input image size
+IMG_SIZE = 224  # Input image size (single integer)
 BATCH_SIZE = 32
 TRAIN_SPLIT = 0.8
 VAL_SPLIT = 0.1

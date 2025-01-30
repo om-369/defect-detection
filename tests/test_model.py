@@ -45,7 +45,7 @@ def test_model_compilation(test_model):
     # Check if model is compiled
     assert test_model.optimizer is not None
     assert test_model.loss is not None
-    assert "accuracy" in test_model.metrics_names
+    assert "binary_accuracy" in test_model.metrics_names
 
 
 def test_model_prediction(test_model):
@@ -76,4 +76,4 @@ def test_model_training(test_model, test_data_dir):
 
     # Check if training metrics are present
     assert "loss" in history.history
-    assert "accuracy" in history.history
+    assert "binary_accuracy" in history.history

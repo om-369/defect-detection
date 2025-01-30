@@ -12,6 +12,7 @@ from typing import Any, Dict, Tuple
 
 import numpy as np
 import tensorflow as tf
+import yaml
 from flask import (
     Flask,
     jsonify,
@@ -41,7 +42,6 @@ from prometheus_client import (
 from pythonjsonlogger import jsonlogger
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-
 
 # Configuration Management
 class Config:

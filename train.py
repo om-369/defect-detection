@@ -9,7 +9,8 @@ from sklearn.model_selection import train_test_split
 
 # Add project root to path
 project_root = str(Path(__file__).resolve().parent)
-sys.path.insert(0, project_root)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from src.config import (
     BATCH_SIZE,
@@ -19,7 +20,7 @@ from src.config import (
     TRAIN_SPLIT,
     VAL_SPLIT,
 )
-from src.data.preprocessing import create_dataset
+from src.data.preprocessing import create_dataset, load_image, preprocess_image
 from src.models.model import compile_model, create_model, get_callbacks
 from src.utils.visualization import plot_training_history
 

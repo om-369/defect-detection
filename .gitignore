@@ -32,8 +32,11 @@ env/
 *.swo
 
 # Project specific
-!src/
-data/
+data/raw/
+data/processed/
+data/labeled/
+!data/test/
+!tests/data/test_images/
 *.h5
 *.hdf5
 *.pkl

@@ -1,13 +1,19 @@
 name: CI/CD Pipeline
 
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
 env:
-  PYTHON_VERSION: 3.12
+  PYTHON_VERSION: '3.12'
   DOCKER_IMAGE: defect-detection
-  GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+  GCP_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: us-central1
   SERVICE_NAME: defect-detection-service
-  SECRET_KEY: ${{ secrets.SECRET_KEY }}
-  MODEL_BUCKET: ${{ secrets.MODEL_BUCKET }}
+  SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
+  MODEL_BUCKET: ${{ secrets.GCP_MODEL_BUCKET }}
 
 jobs:
   quality:
@@ -49,11 +55,16 @@ jobs:
         run: |
           PYTHONPATH=$PYTHONPATH:$(pwd) pytest tests/ --cov=. --cov-report=xml
 
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+
   build:
     name: Build and Push Docker Image
     needs: quality
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v3
       
@@ -83,7 +94,7 @@ jobs:
     name: Deploy to Cloud Run
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Login to Google Cloud
         uses: google-github-actions/auth@v1
@@ -99,6 +110,3 @@ jobs:
           env_vars: |
             MODEL_BUCKET=${{ env.MODEL_BUCKET }}
             SECRET_KEY=${{ env.SECRET_KEY }}
-          
-      - name: Show Output
-        run: echo ${{ steps.deploy.outputs.url }}

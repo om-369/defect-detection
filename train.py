@@ -11,8 +11,14 @@ from sklearn.model_selection import train_test_split
 project_root = str(Path(__file__).resolve().parent)
 sys.path.insert(0, project_root)
 
-from src.config import (BATCH_SIZE, DATA_DIR, MODEL_CONFIG, TEST_SPLIT,
-                        TRAIN_SPLIT, VAL_SPLIT)
+from src.config import (
+    BATCH_SIZE,
+    DATA_DIR,
+    MODEL_CONFIG,
+    TEST_SPLIT,
+    TRAIN_SPLIT,
+    VAL_SPLIT,
+)
 from src.data.preprocessing import create_dataset
 from src.models.model import compile_model, create_model, get_callbacks
 from src.utils.visualization import plot_training_history

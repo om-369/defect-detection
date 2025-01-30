@@ -12,24 +12,36 @@ from typing import Any, Dict, Tuple
 
 import numpy as np
 import tensorflow as tf
-from flask import (Flask, jsonify, redirect, render_template, request,
-                   send_file, session, url_for)
-from flask_login import (LoginManager, UserMixin, current_user, login_required,
-                         login_user, logout_user)
+from flask import (
+    Flask,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    session,
+    url_for,
+)
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
 from google.cloud import storage
-from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Histogram,
-                               generate_latest, start_http_server)
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Histogram,
+    generate_latest,
+    start_http_server,
+)
 from pythonjsonlogger import jsonlogger
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
-<<<<<<< Updated upstream
-# Initialize Flask app
-app = Flask(__name__)
-app.secret_key = os.environ.get(
-    "SECRET_KEY", "your-secret-key"
-)  # Change this in production
-=======
 
 # Configuration Management
 class Config:
@@ -59,11 +71,16 @@ class Config:
         return self._config.get(key, default)
 
 
+# Initialize Flask app
+app = Flask(__name__)
+app.secret_key = os.environ.get(
+    "SECRET_KEY", "your-secret-key"
+)  # Change this in production
+
 # Initialize config
 config = Config()
 
 # Initialize Flask app with dynamic configuration
-app = Flask(__name__)
 app.config["SECRET_KEY"] = config.get("secret_key", os.urandom(24).hex())
 app.config["MAX_CONTENT_LENGTH"] = int(
     config.get("max_content_length", 16 * 1024 * 1024)
@@ -91,7 +108,6 @@ class DefectDetectionApp:
 
 # Initialize defect detection app
 defect_app = DefectDetectionApp()
->>>>>>> Stashed changes
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -116,13 +132,16 @@ PREDICTION_LATENCY = Histogram(
 PREDICTION_ERROR_COUNT = Counter("prediction_errors_total", "Total prediction errors")
 ERROR_COUNT = Counter("error_count_total", "Total number of errors", ["error_type"])
 MODEL_DOWNLOAD_COUNT = Counter("model_downloads_total", "Total model downloads")
-MODEL_DOWNLOAD_ERROR_COUNT = Counter("model_download_errors_total", "Total model download errors")
+MODEL_DOWNLOAD_ERROR_COUNT = Counter(
+    "model_download_errors_total", "Total model download errors"
+)
 
 # Global variables
 model = None
 model_lock = threading.Lock()
 prediction_queue = queue.Queue()
 storage_client = storage.Client()
+
 
 def download_model_from_gcs():
     """Download the latest model from GCS."""
@@ -274,7 +293,6 @@ def logout():
 @app.route("/predict", methods=["POST"])
 @login_required
 def predict():
-<<<<<<< Updated upstream
     """Handle single image prediction."""
     try:
         if "file" not in request.files:
@@ -286,7 +304,7 @@ def predict():
             logger.error("No selected file")
             return jsonify({"error": "No selected file"}), 400
 
-        if not allowed_file(file.filename):
+        if not defect_app.allowed_file(file.filename):
             logger.error(f"Invalid file type: {file.filename}")
             return (
                 jsonify({"error": "Invalid file type. Allowed types: png, jpg, jpeg"}),
@@ -323,20 +341,6 @@ def predict():
                 logger.error(f"Error making prediction: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-=======
-    try:
-        image_file = request.files["image"]
-        logger.debug(f"Received image file: {image_file.filename}")
-        processed_image = process_image(image_file)
-        prediction = model.predict(processed_image)
-        logger.debug(f"Prediction result: {prediction}")
-        result = prediction[0]
-        if isinstance(result, (int, float)):
-            return jsonify({"prediction": result}), 200
-        else:
-            logger.error("Invalid prediction format")
-            return jsonify({"error": "Invalid prediction format"}), 400
->>>>>>> Stashed changes
     except Exception as e:
         ERROR_COUNT.labels(error_type="prediction").inc()
         logger.error(f"Error in prediction endpoint: {str(e)}")
@@ -361,7 +365,6 @@ def history():
 @login_required
 def get_history():
     """Get prediction history."""
-<<<<<<< Updated upstream
     history_file = Path("monitoring/predictions/history.json")
     if not history_file.exists():
         return jsonify([])
@@ -370,18 +373,6 @@ def get_history():
         history = json.load(f)
 
     return jsonify(history)
-=======
-    try:
-        history_file = Path("monitoring/predictions/history.json")
-        if not history_file.exists():
-            return jsonify([])
-        with open(history_file, "r") as f:
-            history = json.load(f)
-        return jsonify(history)
-    except Exception as e:
-        logger.error(f"Error loading history: {str(e)}")
-        return jsonify({"error": str(e)}), 500
->>>>>>> Stashed changes
 
 
 @app.route("/dashboard")
@@ -414,7 +405,9 @@ def reload_model():
     """Endpoint to reload the model."""
     try:
         if download_model_from_gcs() and load_model_safe():
-            return jsonify({"status": "success", "message": "Model reloaded successfully"})
+            return jsonify(
+                {"status": "success", "message": "Model reloaded successfully"}
+            )
         else:
             return (
                 jsonify(
@@ -458,7 +451,6 @@ def status():
 @login_required
 def batch_predict():
     """Endpoint for making predictions on multiple images."""
-<<<<<<< Updated upstream
     try:
         if "files[]" not in request.files:
             return jsonify({"error": "No files uploaded"}), 400
@@ -472,7 +464,7 @@ def batch_predict():
             if file.filename == "":
                 continue
 
-            if not allowed_file(file.filename):
+            if not defect_app.allowed_file(file.filename):
                 results.append(
                     {
                         "filename": file.filename,
@@ -518,45 +510,11 @@ def batch_predict():
     except Exception as e:
         ERROR_COUNT.labels(error_type="batch_prediction").inc()
         return jsonify({"error": str(e)}), 500
-=======
-    if "images" not in request.files:
-        return jsonify({"error": "No images uploaded"}), 400
-    files = request.files.getlist("images")
-    results = []
-    for file in files:
-        if not defect_app.allowed_file(file.filename):
-            continue
-        try:
-            filename = secure_filename(file.filename)
-            temp_path = os.path.join("/tmp", filename)
-            file.save(temp_path)
-            img = load_image(temp_path)
-            img = resize_image(img)
-            img = normalize_image(img)
-            img = np.expand_dims(img, axis=0)
-            prediction = float(model.predict(img)[0, 0])
-            os.remove(temp_path)
-            results.append(
-                {
-                    "filename": file.filename,
-                    "prediction": "defect" if prediction > 0.5 else "no_defect",
-                    "confidence": float(
-                        prediction if prediction > 0.5 else 1 - prediction
-                    ),
-                }
-            )
-        except Exception as e:
-            results.append({"filename": file.filename, "error": str(e)})
-    return jsonify({"results": results}), 200
->>>>>>> Stashed changes
 
 
 def allowed_file(filename):
     """Check if file has an allowed extension."""
-    return (
-        "." in filename
-        and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
-    )
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 # Start time for uptime tracking
@@ -564,15 +522,8 @@ start_time = time.time()
 
 if __name__ == "__main__":
     start_http_server(8000)
-<<<<<<< Updated upstream
-
     # Load model on startup
     load_model_safe()
 
     # Run the Flask app
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-=======
-    load_model_safe()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
->>>>>>> Stashed changes

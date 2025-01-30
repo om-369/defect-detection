@@ -4,13 +4,9 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import List
+from typing import Any, Dict, List
 
-from flask import Flask
-from flask import jsonify
-from flask import render_template
+from flask import Flask, jsonify, render_template
 
 app = Flask(__name__)
 

@@ -4,13 +4,11 @@ import sys
 from pathlib import Path
 
 import tensorflow as tf
-from tensorflow.keras import layers
-from tensorflow.keras import models
+from tensorflow.keras import layers, models
 
 # Add project root to path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
-from config import IMG_SIZE
-from config import MODEL_CONFIG
+from config import IMG_SIZE, MODEL_CONFIG
 
 
 def create_model(num_classes: int = MODEL_CONFIG["num_classes"]) -> tf.keras.Model:

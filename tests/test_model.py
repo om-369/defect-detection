@@ -13,8 +13,7 @@ sys.path.insert(0, project_root)
 
 from src.config import IMG_SIZE
 from src.data.preprocessing import create_dataset
-from src.models.model import compile_model
-from src.models.model import create_model
+from src.models.model import compile_model, create_model
 
 
 def test_model_creation():

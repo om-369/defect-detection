@@ -10,9 +10,7 @@ import tensorflow as tf
 # Add project root to path
 sys.path.append(str(Path(__file__).resolve().parent))
 from config import IMG_SIZE
-from src.data.preprocessing import load_image
-from src.data.preprocessing import normalize_image
-from src.data.preprocessing import resize_image
+from src.data.preprocessing import load_image, normalize_image, resize_image
 from src.utils.visualization import visualize_predictions
 
 

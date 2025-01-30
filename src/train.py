@@ -1,7 +1,8 @@
 import tensorflow as tf
+
 from config import BATCH_SIZE
-from preprocessing import create_dataset
 from models.model import create_model
+from preprocessing import create_dataset
 
 # Initialize components
 train_dataset = create_dataset("data/train", BATCH_SIZE)

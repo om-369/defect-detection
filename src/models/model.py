@@ -35,7 +35,9 @@ def create_model() -> Model:
 
     # Compile model
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
+        optimizer=tf.keras.optimizers.Adam(
+            learning_rate=0.001
+        ),
         loss=tf.keras.losses.BinaryCrossentropy(),
         metrics=["accuracy"],
     )

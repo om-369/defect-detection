@@ -40,7 +40,10 @@ def preprocess_image(image_path: str) -> tf.Tensor:
 
 
 def preprocess(image):
-    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return cv2.cvtColor(
+        image,
+        cv2.COLOR_BGR2GRAY
+    )
 
 
 def create_dataset(

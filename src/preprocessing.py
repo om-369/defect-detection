@@ -1,15 +1,30 @@
-"""Image preprocessing utilities."""
+"""Image preprocessing functions."""
 
+import os
 from pathlib import Path
-from typing import Union
+from typing import Tuple, Union
 
 import tensorflow as tf
-import os
 
 from src.config import IMG_SIZE
 
 
-def preprocess_image(image_path):
+def read_yolo_label(label_path: str) -> Tuple[float, float, float, float]:
+    """Read YOLO format label file.
+    
+    Args:
+        label_path: Path to label file
+        
+    Returns:
+        Tuple of (x_center, y_center, width, height) normalized coordinates
+    """
+    with open(label_path, 'r') as f:
+        line = f.readline().strip().split()
+        # YOLO format: class x_center y_center width height
+        return tuple(map(float, line[1:]))
+
+
+def preprocess_image(image_path: str) -> tf.Tensor:
     """Preprocess image for model input.
     
     Args:
@@ -18,10 +33,8 @@ def preprocess_image(image_path):
     Returns:
         Preprocessed image tensor
     """
-    # Read image file
+    # Read and decode image
     image = tf.io.read_file(image_path)
-    
-    # Decode image
     image = tf.io.decode_jpeg(image, channels=3)
     
     # Resize image
@@ -33,66 +46,50 @@ def preprocess_image(image_path):
     return image
 
 
-def process_path(file_path):
-    """Process a file path into an (image, label) pair.
-    
-    Args:
-        file_path: Path to image file
-        
-    Returns:
-        Tuple of (preprocessed image, label)
-    """
-    # Get label from parent directory name
-    parts = tf.strings.split(file_path, os.sep)
-    label = parts[-2] == "defect"
-    
-    # Load and preprocess the image
-    image = preprocess_image(file_path)
-    
-    return image, label
-
-
 def create_dataset(
     data_dir: Union[str, Path],
     batch_size: int = 32,
-    shuffle: bool = True,
-    augment: bool = False,
+    shuffle: bool = True
 ) -> tf.data.Dataset:
-    """Create a TensorFlow dataset from directory of images.
-
+    """Create a TensorFlow dataset from directory structure.
+    
     Args:
-        data_dir: Directory containing the images
-        batch_size: Number of images per batch
+        data_dir: Path to data directory containing 'defect' and 'no_defect' subdirectories
+        batch_size: Batch size for training
         shuffle: Whether to shuffle the dataset
-        augment: Whether to apply data augmentation
-
+        
     Returns:
         TensorFlow dataset
     """
     data_dir = Path(data_dir)
-
-    # Get image paths and labels
+    
+    # Get all image paths
     defect_dir = data_dir / "defect"
     no_defect_dir = data_dir / "no_defect"
-
-    defect_paths = list(map(str, defect_dir.glob("*.jpg")))
-    no_defect_paths = list(map(str, no_defect_dir.glob("*.jpg")))
-
-    if not defect_paths and not no_defect_paths:
-        raise ValueError(f"No images found in {data_dir}")
-
+    
+    defect_images = list(defect_dir.glob("*.jpg")) + list(defect_dir.glob("*.jpeg"))
+    no_defect_images = list(no_defect_dir.glob("*.jpg")) + list(no_defect_dir.glob("*.jpeg"))
+    
+    all_images = defect_images + no_defect_images
+    labels = [1] * len(defect_images) + [0] * len(no_defect_images)
+    
     # Create dataset
-    dataset = tf.data.Dataset.list_files(str(Path(data_dir) / "*/*"))
-
+    dataset = tf.data.Dataset.from_tensor_slices((
+        [str(x) for x in all_images],
+        labels
+    ))
+    
     # Shuffle if requested
     if shuffle:
-        dataset = dataset.shuffle(buffer_size=len(list(data_dir.glob("*/*"))))
-
+        dataset = dataset.shuffle(buffer_size=len(all_images))
+    
     # Map preprocessing function
-    dataset = dataset.map(process_path, num_parallel_calls=tf.data.AUTOTUNE)
-
+    dataset = dataset.map(
+        lambda x, y: (preprocess_image(x), y),
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+    
     # Batch and prefetch
-    dataset = dataset.batch(batch_size)
-    dataset = dataset.prefetch(tf.data.AUTOTUNE)
-
+    dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+    
     return dataset

@@ -30,11 +30,18 @@ def create_model() -> Model:
     # Create model
     model = Model(inputs, outputs)
     
+    # Create metrics
+    binary_accuracy = tf.keras.metrics.BinaryAccuracy(name='accuracy')
+    
+    # Create optimizer and loss
+    optimizer = tf.keras.optimizers.Adam()
+    loss = tf.keras.losses.BinaryCrossentropy()
+    
     # Compile model
     model.compile(
-        optimizer="adam",
-        loss="binary_crossentropy",
-        metrics=[tf.keras.metrics.BinaryAccuracy()]
+        optimizer=optimizer,
+        loss=loss,
+        metrics=['accuracy']
     )
     
     return model

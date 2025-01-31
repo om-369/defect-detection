@@ -1,27 +1,22 @@
-"""Image preprocessing utilities."""
-
-import logging
-from pathlib import Path
+"""Preprocessing utilities for defect detection."""
 
 import cv2
 import numpy as np
 import torch
-from torchvision import transforms
+from pathlib import Path
+from typing import List, Tuple
 
-
-def load_dataset(data_dir, image_size=(224, 224)):
+def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
     """Load dataset from directory.
-
     Args:
-        data_dir (str): Directory containing the dataset
-        image_size (tuple): Target image size (height, width)
-
+        data_dir: Path to data directory containing images
     Returns:
-        tuple: Arrays of images and labels
+        Tuple of (images, labels) where:
+            images: List of image arrays
+            labels: List of integer class labels
     """
     data_path = Path(data_dir)
     images_dir = data_path / 'images'
-    
     images = []
     labels = []
     
@@ -31,16 +26,8 @@ def load_dataset(data_dir, image_size=(224, 224)):
         img = cv2.imread(str(img_path))
         if img is None:
             continue
-            
         # Convert BGR to RGB
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        
-        # Resize image
-        img = cv2.resize(img, image_size)
-        
-        # Normalize pixel values to [0, 1]
-        img = img.astype(np.float32) / 255.0
-        
         images.append(img)
         
         # Determine label from filename
@@ -51,66 +38,32 @@ def load_dataset(data_dir, image_size=(224, 224)):
             labels.append(0)
         else:
             labels.append(1)
-            
-    if not images:
-        raise ValueError(f"No valid images found in {data_dir}")
-
-    # Convert to numpy arrays
-    images = np.stack(images)
-    labels = np.array(labels)
-
     return images, labels
 
-
-def load_image(image_path, image_size=(224, 224)):
-    """Load and preprocess a single image.
-
+def preprocess_batch(images: List[np.ndarray]) -> torch.Tensor:
+    """Preprocess a batch of images.
     Args:
-        image_path (str): Path to image file
-        image_size (tuple): Target image size (height, width)
-
+        images: List of image arrays
     Returns:
-        numpy.ndarray: Preprocessed image array
+        Preprocessed images as a torch tensor
     """
-    # Read image
-    image = cv2.imread(image_path)
-    if image is None:
-        logging.error(f"Failed to load image: {image_path}")
-        return None
-
-    # Convert BGR to RGB
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    # Resize image
-    image = cv2.resize(image, image_size)
-
-    # Normalize pixel values to [0, 1]
-    image = image.astype(np.float32) / 255.0
-
-    return image
-
-
-def preprocess_batch(images, device=None):
-    """Preprocess a batch of images for model input.
-
-    Args:
-        images (numpy.ndarray): Batch of images
-        device (torch.device): Device to move tensors to
-
-    Returns:
-        torch.Tensor: Preprocessed image tensor
-    """
-    if device is None:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     # Convert to torch tensor
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                           std=[0.229, 0.224, 0.225])
-    ])
+    batch = torch.stack([preprocess_image(img) for img in images])
+    return batch
 
-    # Apply transformations
-    batch = torch.stack([transform(img) for img in images])
-
-    return batch.to(device)
+def preprocess_image(image: np.ndarray) -> torch.Tensor:
+    """Preprocess a single image.
+    Args:
+        image: Input image array
+    Returns:
+        Preprocessed image as torch tensor
+    """
+    # Resize to standard size
+    image = cv2.resize(image, (224, 224))
+    # Scale pixel values to [0,1]
+    image = image.astype(np.float32) / 255.0
+    # Convert to torch tensor and add batch dimension
+    tensor = torch.from_numpy(image)
+    # Rearrange dimensions to [C,H,W]
+    tensor = tensor.permute(2, 0, 1)
+    return tensor

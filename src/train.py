@@ -5,14 +5,12 @@ import torch.nn as nn
 import torch.optim as optim
 from pathlib import Path
 import yaml
-from datetime import datetime
 import logging
 
 from src.models.model import DefectDetectionModel
-from src.preprocessing import load_dataset
+from src.preprocessing import load_dataset, preprocess_batch
 from src.utils.notifications import setup_logging, log_training_metrics
 from src.utils.backup import create_backup
-
 
 def load_config():
     """Load configuration from yaml file."""
@@ -20,10 +18,8 @@ def load_config():
     with open(config_path) as f:
         return yaml.safe_load(f)
 
-
 def train_model(config, logger):
     """Train the defect detection model.
-
     Args:
         config (dict): Configuration dictionary
         logger (logging.Logger): Logger instance
@@ -33,8 +29,8 @@ def train_model(config, logger):
     valid_images, valid_labels = load_dataset(config['data']['valid_dir'])
 
     # Create model
-    model = DefectDetectionModel(num_classes=config['model']['num_classes'])
-    criterion = nn.CrossEntropyLoss()
+    model = DefectDetectionModel()
+    criterion = nn.BCELoss()  # Binary cross entropy loss
     optimizer = optim.Adam(
         model.parameters(),
         lr=config['model']['learning_rate']
@@ -50,12 +46,13 @@ def train_model(config, logger):
 
         # Training
         for i in range(0, len(train_images), config['model']['batch_size']):
-            batch_images = torch.tensor(
+            batch_images = preprocess_batch(
                 train_images[i:i + config['model']['batch_size']]
             )
             batch_labels = torch.tensor(
-                train_labels[i:i + config['model']['batch_size']]
-            )
+                train_labels[i:i + config['model']['batch_size']],
+                dtype=torch.float32  # Binary labels as floats
+            ).unsqueeze(1)  # Add dimension to match model output
 
             optimizer.zero_grad()
             outputs = model(batch_images)
@@ -64,9 +61,9 @@ def train_model(config, logger):
             optimizer.step()
 
             train_loss += loss.item()
-            _, predicted = outputs.max(1)
+            predicted = (outputs > 0.5).float()  # Binary threshold at 0.5
             total += batch_labels.size(0)
-            correct += predicted.eq(batch_labels).sum().item()
+            correct += (predicted == batch_labels).sum().item()
 
         train_accuracy = 100.0 * correct / total
 
@@ -77,20 +74,22 @@ def train_model(config, logger):
         total = 0
 
         with torch.no_grad():
-            for i in range(0, len(valid_images), config['model']['batch_size']):
-                batch_images = torch.tensor(
+            for i in range(0, len(valid_images), 
+                         config['model']['batch_size']):
+                batch_images = preprocess_batch(
                     valid_images[i:i + config['model']['batch_size']]
                 )
                 batch_labels = torch.tensor(
-                    valid_labels[i:i + config['model']['batch_size']]
-                )
+                    valid_labels[i:i + config['model']['batch_size']],
+                    dtype=torch.float32
+                ).unsqueeze(1)
 
                 outputs = model(batch_images)
                 loss = criterion(outputs, batch_labels)
                 valid_loss += loss.item()
-                _, predicted = outputs.max(1)
+                predicted = (outputs > 0.5).float()
                 total += batch_labels.size(0)
-                correct += predicted.eq(batch_labels).sum().item()
+                correct += (predicted == batch_labels).sum().item()
 
         valid_accuracy = 100.0 * correct / total
 
@@ -113,7 +112,6 @@ def train_model(config, logger):
                 checkpoint_path / 'best_model.pth'
             )
             logger.info(f"Saved best model with accuracy: {best_accuracy:.2f}%")
-
 
 def main():
     """Main training function."""
@@ -139,7 +137,6 @@ def main():
     except Exception as e:
         logger.error(f"Training failed: {str(e)}")
         raise
-
 
 if __name__ == "__main__":
     main()

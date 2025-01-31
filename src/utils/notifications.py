@@ -1,10 +1,7 @@
 """Notifications and logging utilities."""
 
 import logging
-import os
-from datetime import datetime
 from pathlib import Path
-from pythonjsonlogger import jsonlogger
 
 
 def setup_logging(log_dir, level=logging.INFO):
@@ -29,19 +26,9 @@ def setup_logging(log_dir, level=logging.INFO):
     logger.handlers = []
 
     # Create formatters
-    json_formatter = jsonlogger.JsonFormatter(
-        '%(asctime)s %(name)s %(levelname)s %(message)s'
-    )
     console_formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-
-    # File handler for JSON logs
-    json_handler = logging.FileHandler(
-        log_dir / f'defect_detection_{datetime.now():%Y%m%d}.json'
-    )
-    json_handler.setFormatter(json_formatter)
-    logger.addHandler(json_handler)
 
     # Console handler for human-readable logs
     console_handler = logging.StreamHandler()

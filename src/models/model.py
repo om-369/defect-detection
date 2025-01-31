@@ -3,20 +3,14 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-import yaml
-import cv2
-
 
 class DefectDetectionModel(nn.Module):
     """CNN model for weld defect detection."""
-    
     def __init__(self):
         """Initialize model architecture."""
         super().__init__()
-        
         # Use ResNet18 backbone pretrained on ImageNet
         self.backbone = models.resnet18(pretrained=True)
-        
         # Replace final layer for binary classification
         num_features = self.backbone.fc.in_features
         self.backbone.fc = nn.Sequential(
@@ -26,13 +20,11 @@ class DefectDetectionModel(nn.Module):
             nn.Linear(512, 1),  # Binary classification
             nn.Sigmoid()  # Output probability between 0 and 1
         )
-        
+    
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
-        
         Args:
             x: Input tensor of shape [batch_size, channels, height, width]
-            
         Returns:
             Output probabilities
         """
@@ -41,10 +33,8 @@ class DefectDetectionModel(nn.Module):
     @staticmethod
     def load_from_checkpoint(checkpoint_path: str) -> 'DefectDetectionModel':
         """Load model from checkpoint file.
-        
         Args:
             checkpoint_path: Path to checkpoint file
-            
         Returns:
             Loaded model
         """
@@ -52,15 +42,13 @@ class DefectDetectionModel(nn.Module):
         model.load_state_dict(torch.load(checkpoint_path))
         return model
 
-
 def load_model(model_path):
-    """Load the trained model."""
+    """Load model from path."""
     model = DefectDetectionModel()
     state_dict = torch.load(model_path, map_location=torch.device('cpu'))
     model.load_state_dict(state_dict)
     model.eval()
     return model
-
 
 def preprocess_image(image_path, target_size=(224, 224)):
     """Preprocess image for model input."""
@@ -70,7 +58,6 @@ def preprocess_image(image_path, target_size=(224, 224)):
     img = img.astype('float32') / 255.0
     img = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0)
     return img
-
 
 def predict(model, image_path):
     """Make prediction on an image."""

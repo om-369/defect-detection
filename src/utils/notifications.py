@@ -19,7 +19,7 @@ def setup_logging(log_dir, level=logging.INFO):
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # Create logger
-    logger = logging.getLogger('defect_detection')
+    logger = logging.getLogger("defect_detection")
     logger.setLevel(level)
 
     # Remove existing handlers
@@ -27,7 +27,7 @@ def setup_logging(log_dir, level=logging.INFO):
 
     # Create formatters
     console_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
     # Console handler for human-readable logs

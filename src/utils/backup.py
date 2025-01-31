@@ -23,7 +23,7 @@ def create_backup(source_dir, backup_dir):
     backup_path.mkdir(parents=True, exist_ok=True)
 
     # Create timestamped backup directory
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_name = f"{source_path.name}_{timestamp}"
     backup_dest = backup_path / backup_name
 
@@ -60,7 +60,7 @@ def cleanup_old_backups(backup_dir, max_backups=5):
     backups = sorted(
         [d for d in backup_path.iterdir() if d.is_dir()],
         key=lambda x: x.stat().st_mtime,
-        reverse=True
+        reverse=True,
     )
 
     # Remove old backups

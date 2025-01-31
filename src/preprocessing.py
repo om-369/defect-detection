@@ -17,11 +17,11 @@ def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
             labels: List of integer class labels
     """
     data_path = Path(data_dir)
-    images_dir = data_path / 'images'
+    images_dir = data_path / "images"
     images = []
     labels = []
     # Load all images from the images directory
-    for img_path in images_dir.glob('*.jpg'):
+    for img_path in images_dir.glob("*.jpg"):
         # Read image
         img = cv2.imread(str(img_path))
         if img is None:
@@ -33,7 +33,7 @@ def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
         # 0 = good weld
         # 1 = bad weld/defect
         filename = img_path.name.lower()
-        if 'good' in filename:
+        if "good" in filename:
             labels.append(0)
         else:
             labels.append(1)

@@ -8,9 +8,7 @@ from typing import Dict, List
 
 
 def plot_training_history(
-    history: Dict[str, List[float]],
-    save_path: Path = None,
-    show: bool = True
+    history: Dict[str, List[float]], save_path: Path = None, show: bool = True
 ) -> None:
     """Plot training history metrics.
 
@@ -56,7 +54,7 @@ def plot_predictions(
     labels: np.ndarray,
     num_samples: int = 5,
     save_path: Path = None,
-    show: bool = True
+    show: bool = True,
 ) -> None:
     """Plot model predictions on sample images.
 
@@ -88,10 +86,7 @@ def plot_predictions(
     plt.close()
 
 
-def plot_roc_curve(
-    y_true: np.ndarray,
-    y_pred_prob: np.ndarray
-) -> plt.Figure:
+def plot_roc_curve(y_true: np.ndarray, y_pred_prob: np.ndarray) -> plt.Figure:
     """Plot ROC curve using matplotlib.
 
     Args:
@@ -118,9 +113,7 @@ def plot_roc_curve(
     return fig
 
 
-def plot_defect_trend(
-    history_data: List[Dict[str, str]]
-) -> plt.Figure:
+def plot_defect_trend(history_data: List[Dict[str, str]]) -> plt.Figure:
     """Plot defect detection trend over time.
 
     Args:
@@ -142,7 +135,4 @@ def plot_defect_trend(
 
 
 def plot_results(results):
-    return plt.plot(
-        results["loss"],
-        label="loss"
-    )
+    return plt.plot(results["loss"], label="loss")

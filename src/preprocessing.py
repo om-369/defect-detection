@@ -40,7 +40,7 @@ def preprocess_image(image_path: str) -> tf.Tensor:
     return image
 
 
-def preprocess(image_path):
+def preprocess(image_path: str) -> np.ndarray:
     """
     Preprocess an image for model input.
     
@@ -67,7 +67,7 @@ def preprocess(image_path):
     return normalized
 
 
-def load_dataset(data_dir, split='train'):
+def load_dataset(data_dir: str, split: str = 'train') -> Tuple[np.ndarray, np.ndarray]:
     """
     Load dataset from directory.
     

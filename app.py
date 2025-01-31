@@ -206,6 +206,7 @@ def load_model_safe():
         return False
 
 
+
 # User class for authentication
 class User(UserMixin):
     def __init__(self, id, username, password_hash):

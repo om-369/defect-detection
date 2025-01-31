@@ -49,13 +49,13 @@ def train_model(config, logger):
 
         # Training
         for i in range(0, len(train_images), batch_size):
-            batch_images = preprocess_batch(
-                train_images[i:i + batch_size]
-            )
+            # Prepare batch
+            batch_end = i + batch_size
+            batch_images = preprocess_batch(train_images[i:batch_end])
             batch_labels = torch.tensor(
-                train_labels[i:i + batch_size],
-                dtype=torch.float32,  # Binary labels as floats
-            ).unsqueeze(1)  # Add dimension to match model output
+                train_labels[i:batch_end],
+                dtype=torch.float32,
+            ).unsqueeze(1)
 
             optimizer.zero_grad()
             outputs = model(batch_images)
@@ -64,7 +64,7 @@ def train_model(config, logger):
             optimizer.step()
 
             train_loss += loss.item()
-            predicted = (outputs > 0.5).float()  # Binary threshold at 0.5
+            predicted = (outputs > 0.5).float()
             total += batch_labels.size(0)
             correct += (predicted == batch_labels).sum().item()
 
@@ -78,11 +78,11 @@ def train_model(config, logger):
 
         with torch.no_grad():
             for i in range(0, len(valid_images), batch_size):
-                batch_images = preprocess_batch(
-                    valid_images[i:i + batch_size]
-                )
+                # Prepare batch
+                batch_end = i + batch_size
+                batch_images = preprocess_batch(valid_images[i:batch_end])
                 batch_labels = torch.tensor(
-                    valid_labels[i:i + batch_size],
+                    valid_labels[i:batch_end],
                     dtype=torch.float32,
                 ).unsqueeze(1)
 
@@ -109,13 +109,9 @@ def train_model(config, logger):
             best_accuracy = valid_accuracy
             checkpoint_path = Path(config["model"]["checkpoint_dir"])
             checkpoint_path.mkdir(parents=True, exist_ok=True)
-            torch.save(
-                model.state_dict(),
-                checkpoint_path / "best_model.pth",
-            )
-            logger.info(
-                f"Saved best model with accuracy: {best_accuracy:.2f}%"
-            )
+            model_path = checkpoint_path / "best_model.pth"
+            torch.save(model.state_dict(), model_path)
+            logger.info(f"Best model saved: {best_accuracy:.2f}%")
 
 
 def main():

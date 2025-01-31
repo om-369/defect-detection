@@ -6,6 +6,7 @@ import torch
 from pathlib import Path
 from typing import List, Tuple
 
+
 def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
     """Load dataset from directory.
     Args:
@@ -19,7 +20,6 @@ def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
     images_dir = data_path / 'images'
     images = []
     labels = []
-    
     # Load all images from the images directory
     for img_path in images_dir.glob('*.jpg'):
         # Read image
@@ -29,7 +29,6 @@ def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
         # Convert BGR to RGB
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         images.append(img)
-        
         # Determine label from filename
         # 0 = good weld
         # 1 = bad weld/defect
@@ -39,6 +38,7 @@ def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
         else:
             labels.append(1)
     return images, labels
+
 
 def preprocess_batch(images: List[np.ndarray]) -> torch.Tensor:
     """Preprocess a batch of images.
@@ -50,6 +50,7 @@ def preprocess_batch(images: List[np.ndarray]) -> torch.Tensor:
     # Convert to torch tensor
     batch = torch.stack([preprocess_image(img) for img in images])
     return batch
+
 
 def preprocess_image(image: np.ndarray) -> torch.Tensor:
     """Preprocess a single image.

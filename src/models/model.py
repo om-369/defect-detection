@@ -3,6 +3,8 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import cv2
+
 
 class DefectDetectionModel(nn.Module):
     """CNN model for weld defect detection."""
@@ -20,7 +22,7 @@ class DefectDetectionModel(nn.Module):
             nn.Linear(512, 1),  # Binary classification
             nn.Sigmoid()  # Output probability between 0 and 1
         )
-    
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
         Args:
@@ -29,7 +31,7 @@ class DefectDetectionModel(nn.Module):
             Output probabilities
         """
         return self.backbone(x)
-    
+
     @staticmethod
     def load_from_checkpoint(checkpoint_path: str) -> 'DefectDetectionModel':
         """Load model from checkpoint file.
@@ -42,6 +44,7 @@ class DefectDetectionModel(nn.Module):
         model.load_state_dict(torch.load(checkpoint_path))
         return model
 
+
 def load_model(model_path):
     """Load model from path."""
     model = DefectDetectionModel()
@@ -49,6 +52,7 @@ def load_model(model_path):
     model.load_state_dict(state_dict)
     model.eval()
     return model
+
 
 def preprocess_image(image_path, target_size=(224, 224)):
     """Preprocess image for model input."""
@@ -58,6 +62,7 @@ def preprocess_image(image_path, target_size=(224, 224)):
     img = img.astype('float32') / 255.0
     img = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0)
     return img
+
 
 def predict(model, image_path):
     """Make prediction on an image."""

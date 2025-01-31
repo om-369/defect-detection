@@ -5,18 +5,19 @@ import torch.nn as nn
 import torch.optim as optim
 from pathlib import Path
 import yaml
-import logging
 
 from src.models.model import DefectDetectionModel
 from src.preprocessing import load_dataset, preprocess_batch
 from src.utils.notifications import setup_logging, log_training_metrics
 from src.utils.backup import create_backup
 
+
 def load_config():
     """Load configuration from yaml file."""
     config_path = Path("config/config.yaml")
     with open(config_path) as f:
         return yaml.safe_load(f)
+
 
 def train_model(config, logger):
     """Train the defect detection model.
@@ -74,13 +75,13 @@ def train_model(config, logger):
         total = 0
 
         with torch.no_grad():
-            for i in range(0, len(valid_images), 
-                         config['model']['batch_size']):
+            batch_size = config['model']['batch_size']
+            for i in range(0, len(valid_images), batch_size):
                 batch_images = preprocess_batch(
-                    valid_images[i:i + config['model']['batch_size']]
+                    valid_images[i:i + batch_size]
                 )
                 batch_labels = torch.tensor(
-                    valid_labels[i:i + config['model']['batch_size']],
+                    valid_labels[i:i + batch_size],
                     dtype=torch.float32
                 ).unsqueeze(1)
 
@@ -111,7 +112,10 @@ def train_model(config, logger):
                 model.state_dict(),
                 checkpoint_path / 'best_model.pth'
             )
-            logger.info(f"Saved best model with accuracy: {best_accuracy:.2f}%")
+            logger.info(
+                f"Saved best model with accuracy: {best_accuracy:.2f}%"
+            )
+
 
 def main():
     """Main training function."""
@@ -137,6 +141,7 @@ def main():
     except Exception as e:
         logger.error(f"Training failed: {str(e)}")
         raise
+
 
 if __name__ == "__main__":
     main()

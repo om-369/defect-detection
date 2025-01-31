@@ -1,129 +1,83 @@
-"""Email notification system for critical events."""
+"""Notifications and logging utilities."""
 
 import logging
 import os
-import smtplib
 from datetime import datetime
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from typing import Dict, Any
-
-logger = logging.getLogger(__name__)
+from pathlib import Path
+from pythonjsonlogger import jsonlogger
 
 
-class EmailNotifier:
-    """Email notification system."""
+def setup_logging(log_dir, level=logging.INFO):
+    """Set up logging configuration.
 
-    def __init__(self):
-        """Initialize email notifier with environment variables."""
-        self.smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-        self.smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-        self.sender_email = os.environ.get("NOTIFICATION_EMAIL")
-        self.sender_password = os.environ.get("NOTIFICATION_PASSWORD")
-        self.recipient_emails = os.environ.get("ALERT_RECIPIENTS", "").split(",")
+    Args:
+        log_dir (str): Directory to store log files
+        level (int): Logging level
 
-    def is_configured(self) -> bool:
-        """Check if email notification is properly configured."""
-        return all(
-            [
-                self.smtp_server,
-                self.smtp_port,
-                self.sender_email,
-                self.sender_password,
-                self.recipient_emails,
-            ]
-        )
+    Returns:
+        logging.Logger: Configured logger instance
+    """
+    # Create log directory if it doesn't exist
+    log_dir = Path(log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
 
-    def send_notification(
-        self, subject: str, body: str, priority: str = "normal"
-    ) -> bool:
-        """Send email notification.
+    # Create logger
+    logger = logging.getLogger('defect_detection')
+    logger.setLevel(level)
 
-        Args:
-            subject: Email subject
-            body: Email body content
-            priority: Priority level (low, normal, high)
+    # Remove existing handlers
+    logger.handlers = []
 
-        Returns:
-            bool: True if email was sent successfully
-        """
-        if not self.is_configured():
-            logger.warning("Email notification not configured")
-            return False
+    # Create formatters
+    json_formatter = jsonlogger.JsonFormatter(
+        '%(asctime)s %(name)s %(levelname)s %(message)s'
+    )
+    console_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 
-        try:
-            msg = MIMEMultipart()
-            msg["From"] = self.sender_email
-            msg["To"] = ", ".join(self.recipient_emails)
-            msg["Subject"] = f"[Defect Detection] {subject}"
+    # File handler for JSON logs
+    json_handler = logging.FileHandler(
+        log_dir / f'defect_detection_{datetime.now():%Y%m%d}.json'
+    )
+    json_handler.setFormatter(json_formatter)
+    logger.addHandler(json_handler)
 
-            # Add priority header
-            if priority == "high":
-                msg["X-Priority"] = "1"
-            elif priority == "low":
-                msg["X-Priority"] = "5"
+    # Console handler for human-readable logs
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
 
-            # Add timestamp and environment info to body
-            full_body = (
-                f"Timestamp: {datetime.utcnow().isoformat()}\n"
-                f"Environment: {os.environ.get('ENVIRONMENT', 'development')}\n"
-                f"Priority: {priority}\n\n"
-                f"{body}"
-            )
-
-            msg.attach(MIMEText(full_body, "plain"))
-
-            # Connect to SMTP server
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.sender_email, self.sender_password)
-                server.send_message(msg)
-
-            logger.info(f"Notification sent: {subject}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to send notification: {str(e)}")
-            return False
-
-    def notify_model_error(self, error: str) -> bool:
-        """Send notification for model-related errors."""
-        subject = "Model Error Detected"
-        body = f"The following error occurred with the model:\n\n{error}"
-        return self.send_notification(subject, body, priority="high")
-
-    def notify_high_defect_rate(self, defect_rate: float, threshold: float) -> bool:
-        """Send notification when defect rate exceeds threshold."""
-        subject = "High Defect Rate Alert"
-        body = (
-            f"The current defect detection rate ({defect_rate:.2f}%) has exceeded\n"
-            f"the configured threshold ({threshold:.2f}%).\n\n"
-            f"Please investigate the production line for potential issues."
-        )
-        return self.send_notification(subject, body, priority="high")
-
-    def notify_system_status(self, status: Dict[str, Any]) -> bool:
-        """Send system status notification."""
-        subject = f"System Status: {status['overall_status']}"
-        body = (
-            f"System Health Check Summary:\n\n"
-            f"Overall Status: {status['overall_status']}\n"
-            f"Healthy Checks: {status['healthy_checks']}/{status['total_checks']}\n\n"
-            f"Component Status:\n"
-            f"{self._format_component_status(status['components'])}\n\n"
-            f"Performance Metrics:\n"
-            f"- Average Response Time: {status['metrics']['avg_response_time']:.2f}ms\n"
-            f"- Error Rate: {status['metrics']['error_rate']:.2f}%\n"
-            f"- Memory Usage: {status['metrics']['memory_usage']:.1f}MB"
-        )
-        return self.send_notification(subject, body, priority="normal")
-
-    def _format_component_status(self, components: Dict[str, str]) -> str:
-        """Format component status for email body."""
-        return "\n".join(
-            [f"- {component}: {status}" for component, status in components.items()]
-        )
+    return logger
 
 
-# Global notifier instance
-notifier = EmailNotifier()
+def log_training_metrics(logger, epoch, metrics):
+    """Log training metrics.
+
+    Args:
+        logger (logging.Logger): Logger instance
+        epoch (int): Current epoch number
+        metrics (dict): Dictionary containing metrics
+    """
+    logger.info(
+        f"Epoch {epoch}: "
+        f"loss={metrics['loss']:.4f}, "
+        f"accuracy={metrics['accuracy']:.2f}%, "
+        f"valid_loss={metrics['valid_loss']:.4f}, "
+        f"valid_accuracy={metrics['valid_accuracy']:.2f}%"
+    )
+
+
+def log_prediction(logger, image_path, result):
+    """Log prediction results.
+
+    Args:
+        logger (logging.Logger): Logger instance
+        image_path (str): Path to input image
+        result (dict): Dictionary containing prediction results
+    """
+    logger.info(
+        f"Prediction for {image_path}: "
+        f"class={result['class']}, "
+        f"confidence={result['confidence']:.2f}%"
+    )

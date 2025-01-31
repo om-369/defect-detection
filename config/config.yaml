@@ -1,0 +1,23 @@
+# Model configuration
+model:
+  num_classes: 2
+  learning_rate: 0.001
+  batch_size: 32
+  epochs: 10
+  checkpoint_dir: "models/checkpoints"
+
+# Data configuration
+data:
+  train_dir: "data/train"
+  valid_dir: "data/test"
+  image_size: [224, 224]
+
+# Logging configuration
+logging:
+  log_dir: "logs"
+  level: "INFO"
+
+# Backup configuration
+backup:
+  backup_dir: "backups"
+  keep_days: 7

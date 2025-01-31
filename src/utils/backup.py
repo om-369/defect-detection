@@ -1,213 +1,77 @@
-"""Automated backup system for prediction history and model data."""
+"""Backup utilities for model and data files."""
 
 import logging
-import os
 import shutil
-import zipfile
 from datetime import datetime
 from pathlib import Path
-import schedule
 
 
-logger = logging.getLogger(__name__)
+def create_backup(source_dir, backup_dir):
+    """Create a backup of the source directory.
+
+    Args:
+        source_dir (str): Directory to backup
+        backup_dir (str): Directory to store backups
+
+    Returns:
+        Path: Path to the created backup
+    """
+    source_path = Path(source_dir)
+    backup_path = Path(backup_dir)
+
+    # Create backup directory if it doesn't exist
+    backup_path.mkdir(parents=True, exist_ok=True)
+
+    # Create timestamped backup directory
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    backup_name = f"{source_path.name}_{timestamp}"
+    backup_dest = backup_path / backup_name
+
+    try:
+        # Copy directory
+        if source_path.exists():
+            shutil.copytree(source_path, backup_dest)
+            logging.info(f"Created backup at {backup_dest}")
+        else:
+            logging.warning(f"Source directory {source_path} does not exist")
+
+        return backup_dest
+
+    except Exception as e:
+        logging.error(f"Backup failed: {str(e)}")
+        raise
 
 
-class BackupManager:
-    """Manages automated backups of system data."""
+def cleanup_old_backups(backup_dir, max_backups=5):
+    """Remove old backups, keeping only the most recent ones.
 
-    def __init__(self, base_dir: str = "backups"):
-        """Initialize backup manager.
+    Args:
+        backup_dir (str): Directory containing backups
+        max_backups (int): Maximum number of backups to keep
 
-        Args:
-            base_dir: Base directory for storing backups
-        """
-        self.base_dir = Path(base_dir)
-        self.base_dir.mkdir(parents=True, exist_ok=True)
+    Returns:
+        int: Number of backups removed
+    """
+    backup_path = Path(backup_dir)
+    if not backup_path.exists():
+        return 0
 
-        # Create subdirectories
-        self.predictions_dir = self.base_dir / "predictions"
-        self.models_dir = self.base_dir / "models"
-        self.configs_dir = self.base_dir / "configs"
+    # List all backup directories
+    backups = sorted(
+        [d for d in backup_path.iterdir() if d.is_dir()],
+        key=lambda x: x.stat().st_mtime,
+        reverse=True
+    )
 
-        for directory in [self.predictions_dir, self.models_dir, self.configs_dir]:
-            directory.mkdir(exist_ok=True)
+    # Remove old backups
+    removed = 0
+    if len(backups) > max_backups:
+        for backup in backups[max_backups:]:
+            try:
+                shutil.rmtree(backup)
+                removed += 1
+                logging.info(f"Removed old backup: {backup}")
+            except Exception as e:
+                logging.error(f"Failed to remove backup {backup}: {str(e)}")
 
-    def backup_predictions(self) -> bool:
-        """Backup prediction history."""
-        try:
-            source = Path("monitoring/predictions/history.json")
-            if not source.exists():
-                logger.warning("No prediction history to backup")
-                return False
-
-            # Create timestamped backup file
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            backup_file = self.predictions_dir / f"predictions_{timestamp}.json"
-
-            # Copy and compress the file
-            with open(source, "r") as f:
-                data = json.load(f)
-
-            with open(backup_file, "w") as f:
-                json.dump(data, f, indent=2)
-
-            # Create zip archive
-            zip_file = backup_file.with_suffix(".zip")
-            with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zipf:
-                zipf.write(backup_file, backup_file.name)
-
-            # Remove uncompressed file
-            backup_file.unlink()
-
-            # Cleanup old backups (keep last 30 days)
-            self._cleanup_old_backups(self.predictions_dir, days=30)
-
-            logger.info(f"Prediction history backed up to {zip_file}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to backup predictions: {str(e)}")
-            return False
-
-    def backup_model(self, model_path: Path) -> bool:
-        """Backup model files."""
-        try:
-            if not model_path.exists():
-                logger.warning(f"Model file not found: {model_path}")
-                return False
-
-            # Create timestamped backup file
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            backup_file = self.models_dir / f"model_{timestamp}.h5"
-
-            # Copy model file
-            shutil.copy2(model_path, backup_file)
-
-            # Create zip archive
-            zip_file = backup_file.with_suffix(".zip")
-            with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zipf:
-                zipf.write(backup_file, backup_file.name)
-
-            # Remove uncompressed file
-            backup_file.unlink()
-
-            # Cleanup old backups (keep last 5 versions)
-            self._cleanup_old_backups(self.models_dir, keep_versions=5)
-
-            logger.info(f"Model backed up to {zip_file}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to backup model: {str(e)}")
-            return False
-
-    def backup_configs(self) -> bool:
-        """Backup configuration files."""
-        try:
-            # List of config files to backup
-            config_files = [
-                ".env",
-                "config.py",
-                "requirements.txt",
-                ".github/workflows/ci.yml",
-            ]
-
-            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            backup_dir = self.configs_dir / f"configs_{timestamp}"
-            backup_dir.mkdir(exist_ok=True)
-
-            # Copy each config file
-            for config_file in config_files:
-                source = Path(config_file)
-                if source.exists():
-                    dest = backup_dir / source.name
-                    shutil.copy2(source, dest)
-
-            # Create zip archive
-            zip_file = backup_dir.with_suffix(".zip")
-            with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zipf:
-                for file in backup_dir.glob("*"):
-                    zipf.write(file, file.name)
-
-            # Remove uncompressed directory
-            shutil.rmtree(backup_dir)
-
-            # Cleanup old backups (keep last 10 versions)
-            self._cleanup_old_backups(self.configs_dir, keep_versions=10)
-
-            logger.info(f"Configurations backed up to {zip_file}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to backup configs: {str(e)}")
-            return False
-
-    def _cleanup_old_backups(
-        self, directory: Path, days: int = None, keep_versions: int = None
-    ):
-        """Clean up old backup files.
-
-        Args:
-            directory: Directory containing backups
-            days: Number of days to keep backups
-            keep_versions: Number of versions to keep
-        """
-        files = sorted(directory.glob("*.zip"), key=lambda x: x.stat().st_mtime)
-
-        if days is not None:
-            # Remove files older than specified days
-            cutoff = datetime.now().timestamp() - (days * 24 * 3600)
-            old_files = [f for f in files if f.stat().st_mtime < cutoff]
-            for file in old_files:
-                file.unlink()
-                logger.info(f"Removed old backup: {file}")
-
-        elif keep_versions is not None and len(files) > keep_versions:
-            # Remove excess versions
-            files_to_remove = files[:-keep_versions]
-            for file in files_to_remove:
-                file.unlink()
-                logger.info(f"Removed old version: {file}")
-
-
-class BackupScheduler:
-    """Scheduler for automated backups."""
-
-    def __init__(self):
-        """Initialize the backup scheduler."""
-        self.backup_manager = BackupManager()
-        self.running = False
-
-    def start(self):
-        """Start the backup scheduler."""
-        if self.running:
-            return
-
-        # Schedule daily backups
-        schedule.every().day.at("00:00").do(self.backup_manager.backup_predictions)
-        schedule.every().day.at("00:00").do(self.backup_manager.backup_configs)
-
-        # Schedule model backups after each training
-        schedule.every().hour.do(
-            self.backup_manager.backup_model, model_path=Path("models/model.h5")
-        )
-
-        self.running = True
-        self._run_schedule()
-
-        logger.info("Backup scheduler started")
-
-    def stop(self):
-        """Stop the backup scheduler."""
-        self.running = False
-        logger.info("Backup scheduler stopped")
-
-    def _run_schedule(self):
-        """Run the scheduler loop."""
-        while self.running:
-            schedule.run_pending()
-            time.sleep(60)
-
-
-# Global scheduler instance
-backup_scheduler = BackupScheduler()
+    return removed

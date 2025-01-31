@@ -4,7 +4,11 @@ import pytest
 import numpy as np
 import torch
 import cv2
-from src.models.model import DefectDetectionModel, preprocess_image, predict
+from src.models.model import (
+    DefectDetectionModel,
+    preprocess_image,
+    predict
+)
 
 
 @pytest.fixture
@@ -69,4 +73,5 @@ def test_model_output_format(test_model, test_image_path):
     assert set(result.keys()) == expected
     assert len(result['all_probabilities']) == 3
     assert all(isinstance(k, int) for k in result['all_probabilities'])
-    assert all(isinstance(v, float) for v in result['all_probabilities'].values())
+    probs = result['all_probabilities'].values()
+    assert all(isinstance(v, float) for v in probs)

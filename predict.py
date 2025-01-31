@@ -1,88 +1,120 @@
-"""Script for making predictions using the trained model."""
+"""Script for making predictions with trained model."""
 
-import sys
+import torch
 from pathlib import Path
+import yaml
+from prometheus_client import Counter, start_http_server
 
-import cv2
-import numpy as np
-import tensorflow as tf
+from src.models.model import DefectDetectionModel
+from src.preprocessing import preprocess
+from src.utils.notifications import setup_logging, log_prediction
 
-# Add project root to path
-sys.path.append(str(Path(__file__).resolve().parent))
-from config import IMG_SIZE
-from src.data.preprocessing import load_image, normalize_image, resize_image
-from src.utils.visualization import visualize_predictions
+# Prometheus metrics
+PREDICTION_COUNTER = Counter(
+    'defect_predictions_total',
+    'Total number of defect predictions made',
+    ['predicted_class']
+)
 
+def load_config():
+    """Load configuration from yaml file."""
+    config_path = Path("config/config.yaml")
+    with open(config_path) as f:
+        return yaml.safe_load(f)
 
-def load_model(model_path: str = "models/best_model.h5") -> tf.keras.Model:
-    """Load the trained model."""
-    return tf.keras.models.load_model(model_path)
+def load_model(checkpoint_path, num_classes):
+    """Load trained model from checkpoint.
 
+    Args:
+        checkpoint_path (str): Path to model checkpoint
+        num_classes (int): Number of classes
 
-def predict_single_image(model: tf.keras.Model, image_path: str) -> float:
-    """Make prediction on a single image."""
-    # Load and preprocess image
-    img = load_image(image_path)
-    img = resize_image(img)
-    img = normalize_image(img)
+    Returns:
+        DefectDetectionModel: Loaded model
+    """
+    model = DefectDetectionModel(num_classes=num_classes)
+    model.load_state_dict(torch.load(checkpoint_path))
+    model.eval()
+    return model
+
+def predict_image(model, image_path, logger):
+    """Make prediction for a single image.
+
+    Args:
+        model (DefectDetectionModel): Trained model
+        image_path (str): Path to input image
+        logger (logging.Logger): Logger instance
+
+    Returns:
+        dict: Prediction results
+    """
+    # Preprocess image
+    image = preprocess(image_path)
+    image_tensor = torch.tensor(image).unsqueeze(0)
 
     # Make prediction
-    prediction = model.predict(np.expand_dims(img, axis=0))[0]
+    with torch.no_grad():
+        outputs = model(image_tensor)
+        probabilities = torch.softmax(outputs, dim=1)[0]
+        predicted_class = int(torch.argmax(probabilities))
+        confidence = float(probabilities[predicted_class]) * 100
 
-    return float(prediction)
+    # Create result dictionary
+    result = {
+        'class': predicted_class,
+        'confidence': confidence,
+        'all_probabilities': {
+            i: float(prob) * 100
+            for i, prob in enumerate(probabilities)
+        }
+    }
 
+    # Log prediction
+    log_prediction(logger, image_path, result)
 
-def predict_batch(
-    model: tf.keras.Model, image_paths: list, batch_size: int = 32
-) -> np.ndarray:
-    """Make predictions on a batch of images."""
-    # Prepare images
-    images = []
-    for path in image_paths:
-        img = load_image(path)
-        img = resize_image(img)
-        img = normalize_image(img)
-        images.append(img)
+    # Update Prometheus metrics
+    PREDICTION_COUNTER.labels(predicted_class=str(predicted_class)).inc()
 
-    # Convert to numpy array
-    images = np.array(images)
-
-    # Make predictions
-    predictions = model.predict(images, batch_size=batch_size)
-
-    return predictions
-
+    return result
 
 def main():
     """Main prediction function."""
+    # Load configuration
+    config = load_config()
+
+    # Setup logging
+    logger = setup_logging(config['logging']['log_dir'])
+    logger.info("Starting prediction service...")
+
+    # Start Prometheus metrics server
+    start_http_server(config['monitoring']['prometheus_port'])
+    logger.info(
+        f"Started Prometheus metrics server on port "
+        f"{config['monitoring']['prometheus_port']}"
+    )
+
     # Load model
-    model = load_model()
+    checkpoint_path = (
+        Path(config['model']['checkpoint_dir']) / 'best_model.pth'
+    )
+    try:
+        model = load_model(
+            checkpoint_path,
+            config['model']['num_classes']
+        )
+        logger.info("Model loaded successfully")
+    except Exception as e:
+        logger.error(f"Failed to load model: {str(e)}")
+        raise
 
-    # Directory containing images to predict
-    predict_dir = Path("data/predict")
-
-    if not predict_dir.exists():
-        print(f"Directory {predict_dir} does not exist.")
-        return
-
-    # Get all image paths
-    image_paths = list(predict_dir.glob("*.jpg"))
-
-    if not image_paths:
-        print(f"No images found in {predict_dir}")
-        return
-
-    # Make predictions
-    predictions = predict_batch(model, [str(p) for p in image_paths])
-
-    # Process and display results
-    for path, pred in zip(image_paths, predictions):
-        pred_class = "Defect" if pred > 0.5 else "No Defect"
-        confidence = pred if pred > 0.5 else 1 - pred
-        print(f"Image: {path.name}")
-        print(f"Prediction: {pred_class}")
-        print(f"Confidence: {confidence:.2%}\n")
-
+    # Example prediction
+    try:
+        image_path = "data/test/test_image.jpg"
+        result = predict_image(model, image_path, logger)
+        print(f"Prediction result: {result}")
+    except Exception as e:
+        logger.error(f"Prediction failed: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     main()

@@ -49,11 +49,15 @@ def preprocess(image_path: str) -> np.ndarray:
         
     Returns:
         numpy.ndarray: Preprocessed image
+
+    Raises:
+        ValueError: If image cannot be loaded
     """
     # Read image
     image = cv2.imread(str(image_path))
     if image is None:
-        raise ValueError(f"Failed to load image: {image_path}")
+        msg = f"Failed to load image: {image_path}"
+        raise ValueError(msg)
     
     # Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -77,17 +81,28 @@ def load_dataset(data_dir: str, split: str = 'train') -> Tuple[np.ndarray, np.nd
         
     Returns:
         tuple: (images, labels)
+
+    Raises:
+        ValueError: If directory structure is invalid or data is missing
     """
     data_dir = Path(data_dir)
     images_dir = data_dir / split / 'images'
     labels_dir = data_dir / split / 'labels'
+
+    if not images_dir.exists() or not labels_dir.exists():
+        msg = f"Invalid dataset directory structure at: {data_dir}"
+        raise ValueError(msg)
     
     # Get all image files
     image_files = sorted(list(images_dir.glob('*.jpg')))
     label_files = sorted(list(labels_dir.glob('*.txt')))
     
     if len(image_files) != len(label_files):
-        raise ValueError(f"Number of images ({len(image_files)}) does not match number of labels ({len(label_files)})")
+        msg = (
+            f"Number of images ({len(image_files)}) "
+            f"does not match number of labels ({len(label_files)})"
+        )
+        raise ValueError(msg)
     
     # Load and preprocess images
     images = []
@@ -118,11 +133,22 @@ def create_dataset(
 
     Returns:
         TensorFlow dataset
+
+    Raises:
+        ValueError: If directory structure is invalid or data is missing
     """
     data_dir = Path(data_dir)
 
+    if not data_dir.exists():
+        msg = f"Invalid dataset directory: {data_dir}"
+        raise ValueError(msg)
+
     defect_dir = data_dir / "defect"
     no_defect_dir = data_dir / "no_defect"
+
+    if not defect_dir.exists() or not no_defect_dir.exists():
+        msg = f"Invalid dataset directory structure at: {data_dir}"
+        raise ValueError(msg)
 
     defect_images = (
         list(defect_dir.glob("*.jpg")) + list(defect_dir.glob("*.jpeg"))

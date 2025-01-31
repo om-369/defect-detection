@@ -1,11 +1,8 @@
 """Automated backup system for prediction history and model data."""
 
-import json
 import logging
 import os
 import shutil
-import threading
-import time
 import zipfile
 from datetime import datetime
 from pathlib import Path

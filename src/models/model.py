@@ -4,8 +4,7 @@ import torch
 import torch.nn as nn
 import yaml
 import cv2
-import numpy as np
-from pathlib import Path
+
 
 class DefectDetectionModel(nn.Module):
     """DefectDetectionModel class for welding defect detection."""

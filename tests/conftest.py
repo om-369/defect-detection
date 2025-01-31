@@ -1,26 +1,32 @@
+"""Test configuration and fixtures."""
+
 import pytest
 import os
 import shutil
+import numpy as np
+import cv2
+
 
 @pytest.fixture
 def test_data_dir(tmp_path):
-    """Create a temporary test data directory."""
-    data_dir = tmp_path / "data"
+    """Create test data directory."""
+    data_dir = tmp_path / 'data'
     data_dir.mkdir()
-    
-    # Create train/val/test directories
-    for split in ["train", "valid", "test"]:
-        (data_dir / split / "images").mkdir(parents=True)
-        (data_dir / split / "labels").mkdir(parents=True)
-    
     return data_dir
+
+
+@pytest.fixture
+def test_image_path(test_data_dir):
+    """Create test image."""
+    image_path = test_data_dir / 'test.jpg'
+    img = np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
+    cv2.imwrite(str(image_path), img)
+    return image_path
+
 
 @pytest.fixture(autouse=True)
 def cleanup_after_test():
     """Clean up any files created during tests."""
     yield
-    # Clean up any temporary files created during tests
-    if os.path.exists("uploads"):
-        shutil.rmtree("uploads")
-    if os.path.exists("models/temp"):
-        shutil.rmtree("models/temp")
+    if os.path.exists('tmp'):
+        shutil.rmtree('tmp')

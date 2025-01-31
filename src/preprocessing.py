@@ -39,7 +39,7 @@ def preprocess_image(image_path: str) -> tf.Tensor:
     return image
 
 
-def preprocess(image):
+def preprocess(image) -> None:
     return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 
@@ -80,7 +80,7 @@ def create_dataset(
 
     dataset = dataset.map(
         lambda x, y: (preprocess_image(x), y),
-        num_parallel_calls=tf.data.AUTOTUNE
+        num_parallel_calls=tf.data.AUTOTUNE,
     )
 
     dataset = dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)

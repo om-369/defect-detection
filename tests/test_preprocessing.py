@@ -9,7 +9,8 @@ import tensorflow as tf
 
 from src.preprocessing import preprocess
 from src.config import IMG_SIZE
-from src.preprocessing import create_dataset, read_yolo_label
+from src.preprocessing import create_dataset
+from src.preprocessing import read_yolo_label
 
 
 @pytest.fixture

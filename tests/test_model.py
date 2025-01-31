@@ -2,12 +2,15 @@
 
 import torch
 from src.models.model import DefectDetectionModel
+import pytest
 
 
+@pytest.mark.unit
 def test_model_initialization():
     """Test model initialization."""
     model = DefectDetectionModel()
     assert isinstance(model, DefectDetectionModel)
+    assert isinstance(model, torch.nn.Module)
 
 
 def test_model_forward():

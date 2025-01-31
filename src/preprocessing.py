@@ -1,10 +1,11 @@
 """Preprocessing utilities for defect detection."""
 
+from pathlib import Path
+from typing import List, Tuple
+
 import cv2
 import numpy as np
 import torch
-from pathlib import Path
-from typing import List, Tuple
 
 
 def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:

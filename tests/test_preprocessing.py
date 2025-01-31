@@ -1,12 +1,13 @@
 """Tests for preprocessing functionality."""
 
-import pytest
-import numpy as np
-import cv2
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
-from src.preprocessing import preprocess, load_dataset
+import cv2
+import numpy as np
+import pytest
+
+from src.preprocessing import load_dataset, preprocess
 
 
 @pytest.fixture

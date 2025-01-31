@@ -1,9 +1,9 @@
 """Deep learning model for defect detection."""
 
+import cv2
 import torch
 import torch.nn as nn
 import torchvision.models as models
-import cv2
 from typing import TypeVar
 
 Model = TypeVar("Model", bound=nn.Module)

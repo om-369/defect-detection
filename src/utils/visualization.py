@@ -139,3 +139,7 @@ def plot_defect_trend(
     ax.set_ylabel("Defects")
 
     return fig
+
+
+def plot_results(results):
+    return plt.plot(results['loss'], label='loss')

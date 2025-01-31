@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Tuple, Union
 
 import tensorflow as tf
+import cv2
 
 from src.config import IMG_SIZE
 
@@ -36,6 +37,10 @@ def preprocess_image(image_path: str) -> tf.Tensor:
     image = tf.image.resize(image, [IMG_SIZE, IMG_SIZE])
     image = tf.cast(image, tf.float32) / 255.0
     return image
+
+
+def preprocess(image):
+    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 
 def create_dataset(

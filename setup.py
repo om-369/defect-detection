@@ -22,8 +22,8 @@ setup(
         "dev": [
             "black>=22.3.0",
             "flake8>=4.0.0",
-            "isort>=5.10.0"
-        ]
+            "isort>=5.10.0",
+        ],
     },
     python_requires=">=3.10",
 )

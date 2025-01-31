@@ -142,4 +142,6 @@ def plot_defect_trend(
 
 
 def plot_results(results):
-    return plt.plot(results["loss"], label="loss")
+    return plt.plot(
+        results["loss"], label="loss"
+    )

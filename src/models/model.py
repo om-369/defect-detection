@@ -72,7 +72,7 @@ def preprocess_image(image_path, target_size=(224, 224)):
     return img
 
 
-def predict(model, image_path):
+def predict(model: nn.Module, image_path):
     """Make prediction on an image."""
     img = preprocess_image(image_path)
     with torch.no_grad():
@@ -80,5 +80,9 @@ def predict(model, image_path):
         prob = output[0][0].item() * 100
         pred_class = 1 if prob > 50 else 0
         all_probs = {0: 100 - prob, 1: prob}
-        
-    return {"class": pred_class, "confidence": prob, "all_probabilities": all_probs}
+
+    return {
+        "class": pred_class,
+        "confidence": prob,
+        "all_probabilities": all_probs,
+    }

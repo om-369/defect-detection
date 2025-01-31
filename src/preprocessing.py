@@ -5,6 +5,7 @@ from typing import Tuple, Union
 
 import tensorflow as tf
 import cv2
+import numpy as np
 
 from src.config import IMG_SIZE
 
@@ -39,11 +40,70 @@ def preprocess_image(image_path: str) -> tf.Tensor:
     return image
 
 
-def preprocess(image):
-    return cv2.cvtColor(
-        image,
-        cv2.COLOR_BGR2GRAY
-    )
+def preprocess(image_path):
+    """
+    Preprocess an image for model input.
+    
+    Args:
+        image_path (str): Path to the image file
+        
+    Returns:
+        numpy.ndarray: Preprocessed image
+    """
+    # Read image
+    image = cv2.imread(str(image_path))
+    if image is None:
+        raise ValueError(f"Failed to load image: {image_path}")
+    
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # Resize to target size
+    resized = cv2.resize(gray, (IMG_SIZE, IMG_SIZE))
+    
+    # Normalize to [0, 1]
+    normalized = resized.astype(np.float32) / 255.0
+    
+    return normalized
+
+
+def load_dataset(data_dir, split='train'):
+    """
+    Load dataset from directory.
+    
+    Args:
+        data_dir (str): Path to data directory
+        split (str): Dataset split (train, valid, test)
+        
+    Returns:
+        tuple: (images, labels)
+    """
+    data_dir = Path(data_dir)
+    images_dir = data_dir / split / 'images'
+    labels_dir = data_dir / split / 'labels'
+    
+    # Get all image files
+    image_files = sorted(list(images_dir.glob('*.jpg')))
+    label_files = sorted(list(labels_dir.glob('*.txt')))
+    
+    if len(image_files) != len(label_files):
+        raise ValueError(f"Number of images ({len(image_files)}) does not match number of labels ({len(label_files)})")
+    
+    # Load and preprocess images
+    images = []
+    labels = []
+    
+    for img_path, label_path in zip(image_files, label_files):
+        # Load image
+        image = preprocess(str(img_path))
+        images.append(image)
+        
+        # Load label
+        with open(label_path, 'r') as f:
+            label = int(f.read().strip())
+        labels.append(label)
+    
+    return np.array(images), np.array(labels)
 
 
 def create_dataset(
@@ -82,7 +142,7 @@ def create_dataset(
         dataset = dataset.shuffle(buffer_size=len(all_images))
 
     dataset = dataset.map(
-        lambda x, y: (preprocess_image(x), y),
+        lambda x, y: (tf.convert_to_tensor(preprocess(x), dtype=tf.float32), y),
         num_parallel_calls=tf.data.AUTOTUNE,
     )
 

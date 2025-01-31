@@ -1,5 +1,5 @@
 # Build stage
-FROM python:3.12-slim as builder
+FROM python:3.13.1-slim as builder
 
 # Set working directory
 WORKDIR /app
@@ -15,7 +15,7 @@ COPY requirements.txt .
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
 
 # Final stage
-FROM python:3.12-slim
+FROM python:3.13.1-slim
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser
@@ -23,12 +23,10 @@ RUN useradd -m -u 1000 appuser
 # Set working directory
 WORKDIR /app
 
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
     libgl1-mesa-glx \
     libglib2.0-0 \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy wheels and requirements
@@ -42,9 +40,7 @@ RUN pip install --no-cache /wheels/*
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p /app/models && \
-    mkdir -p /app/data/uploads && \
-    mkdir -p /app/data/test
+RUN mkdir -p uploads models
 
 # Set ownership to non-root user
 RUN chown -R appuser:appuser /app
@@ -55,6 +51,8 @@ USER appuser
 # Set environment variables
 ARG SECRET_KEY
 ENV SECRET_KEY=${SECRET_KEY}
+ENV FLASK_APP=app.py
+ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
@@ -66,4 +64,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 EXPOSE 8080
 
 # Run the application with proper timeout and worker configuration
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "120", "--workers", "2", "--threads", "4", "--worker-class", "gthread", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "--threads", "2", "--timeout", "120", "app:app"]

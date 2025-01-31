@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+import torch
 import numpy as np
-import tensorflow as tf
 import yaml
 from flask import (
     Flask,
@@ -170,7 +170,7 @@ def download_model_from_gcs():
 
         # Find the latest model
         for blob in bucket.list_blobs(prefix="models/"):
-            if blob.name.endswith(".h5"):
+            if blob.name.endswith(".pth"):
                 if blob.updated.timestamp() > latest_time:
                     latest_time = blob.updated.timestamp()
                     latest_model = blob.name
@@ -182,7 +182,7 @@ def download_model_from_gcs():
 
         # Create models directory if it doesn't exist
         os.makedirs("models", exist_ok=True)
-        model_path = os.path.join("models", "model.h5")
+        model_path = os.path.join("models", "model.pth")
 
         # Download the model
         model_blob.download_to_filename(model_path)
@@ -201,16 +201,42 @@ def load_model_safe():
     global model
     try:
         with model_lock:
-            if not os.path.exists("models/model.h5"):
+            if not os.path.exists("models/model.pth"):
                 if not download_model_from_gcs():
                     return False
-            model = tf.keras.models.load_model("models/model.h5")
+            model = torch.load("models/model.pth")
         logger.info("Model loaded successfully")
         return True
     except Exception as e:
         logger.error(f"Error loading model: {str(e)}")
         return False
 
+
+def load_model(model_path):
+    """Load model from file."""
+    try:
+        model = torch.load(model_path)
+        return model
+    except Exception as e:
+        logger.error(f"Error loading model: {str(e)}")
+        return None
+
+
+def predict(model, filepath):
+    """Make prediction on image."""
+    try:
+        img = torch.load(filepath)
+        img = torch.unsqueeze(img, 0)
+        prediction = model(img)
+        result = {
+            "class": torch.argmax(prediction[0]),
+            "confidence": float(torch.max(prediction[0])) * 100,
+            "all_probabilities": prediction[0].tolist(),
+        }
+        return result
+    except Exception as e:
+        logger.error(f"Error making prediction: {str(e)}")
+        raise
 
 
 # User class for authentication
@@ -236,9 +262,8 @@ def load_user(user_id):
 def process_image(image_data):
     """Process image data for prediction."""
     try:
-        img = tf.image.decode_image(image_data)
-        img = tf.image.resize(img, (224, 224))
-        img = tf.expand_dims(img, 0)
+        img = torch.load(image_data)
+        img = torch.unsqueeze(img, 0)
         return img
     except Exception as e:
         logger.error(f"Error processing image: {str(e)}")
@@ -305,59 +330,43 @@ def logout():
 
 @app.route("/predict", methods=["POST"])
 @login_required
-def predict():
-    """Handle single image prediction."""
-    try:
-        if "file" not in request.files:
-            logger.error("No file part in request")
-            return jsonify({"error": "No file part"}), 400
-
-        file = request.files["file"]
-        if file.filename == "":
-            logger.error("No selected file")
-            return jsonify({"error": "No selected file"}), 400
-
-        if not defect_app.allowed_file(file.filename):
-            logger.error(f"Invalid file type: {file.filename}")
-            return (
-                jsonify({"error": "Invalid file type. Allowed types: png, jpg, jpeg"}),
-                400,
-            )
-
+def predict_defect():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image uploaded'}), 400
+    
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-
-        # Process image and make prediction
-        with PREDICTION_LATENCY.time():
-            PREDICTION_REQUEST_COUNT.inc()
-            try:
-                image_data = tf.io.read_file(filepath)
-                image_data = process_image(image_data)
-                with model_lock:
-                    if model is None:
-                        load_model_safe()
-                    prediction = model.predict(image_data)
-
-                result = {
-                    "defect_probability": float(prediction[0][0]),
-                    "has_defect": bool(prediction[0][0] > 0.5),
-                }
-
-                # Save prediction to history
-                save_prediction_history(filepath, result)
-
-                return jsonify(result)
-
-            except Exception as e:
-                PREDICTION_ERROR_COUNT.inc()
-                logger.error(f"Error making prediction: {str(e)}")
-                return jsonify({"error": str(e)}), 500
-
-    except Exception as e:
-        ERROR_COUNT.labels(error_type="prediction").inc()
-        logger.error(f"Error in prediction endpoint: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        
+        try:
+            model = load_model('models/best.pth')
+            result = predict(model, filepath)
+            
+            # Log prediction
+            app.logger.info(f"Prediction made: {result['class']} with confidence {result['confidence']}%")
+            
+            return jsonify({
+                'status': 'success',
+                'prediction': result['class'],
+                'confidence': result['confidence'],
+                'probabilities': result['all_probabilities']
+            })
+            
+        except Exception as e:
+            app.logger.error(f"Prediction error: {str(e)}")
+            return jsonify({'error': 'Error processing image'}), 500
+        
+        finally:
+            # Cleanup uploaded file
+            if os.path.exists(filepath):
+                os.remove(filepath)
+    
+    return jsonify({'error': 'Invalid file type'}), 400
 
 
 @app.route("/batch")
@@ -493,12 +502,12 @@ def batch_predict():
 
                 with PREDICTION_LATENCY.time():
                     PREDICTION_REQUEST_COUNT.inc()
-                    image_data = tf.io.read_file(filepath)
+                    image_data = torch.load(filepath)
                     image_data = process_image(image_data)
                     with model_lock:
                         if model is None:
                             load_model_safe()
-                        prediction = model.predict(image_data)
+                        prediction = model(image_data)
 
                 result = {
                     "filename": filename,

@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from src.config import IMG_SIZE, MODEL_CONFIG
-from src.models.model import create_model
+from .config import IMG_SIZE, MODEL_CONFIG
+from .models.model import create_model
 
 
 @pytest.fixture

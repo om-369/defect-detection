@@ -7,8 +7,9 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
+from src.preprocessing import preprocess
 from src.config import IMG_SIZE
-from src.preprocessing import create_dataset, preprocess_image, read_yolo_label
+from src.preprocessing import create_dataset, read_yolo_label
 
 
 @pytest.fixture
@@ -43,7 +44,7 @@ def test_data_dir():
 def test_image_loading(test_data_dir):
     """Test image loading function."""
     image_path = str(test_data_dir / "defect" / "defect_0.jpg")
-    image = preprocess_image(image_path)
+    image = preprocess(image_path)
 
     assert isinstance(image, tf.Tensor)
     assert image.shape == (IMG_SIZE, IMG_SIZE, 3)
@@ -54,7 +55,7 @@ def test_image_loading(test_data_dir):
 def test_image_resizing(test_data_dir):
     """Test image resizing."""
     image_path = str(test_data_dir / "defect" / "defect_0.jpg")
-    image = preprocess_image(image_path)
+    image = preprocess(image_path)
 
     assert image.shape == (IMG_SIZE, IMG_SIZE, 3)
 
@@ -62,7 +63,7 @@ def test_image_resizing(test_data_dir):
 def test_image_normalization(test_data_dir):
     """Test image normalization."""
     image_path = str(test_data_dir / "defect" / "defect_0.jpg")
-    image = preprocess_image(image_path)
+    image = preprocess(image_path)
 
     assert tf.reduce_min(image) >= 0.0
     assert tf.reduce_max(image) <= 1.0

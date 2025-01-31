@@ -48,6 +48,9 @@ checkpoints/
 .env
 .env.*
 
+# GCP Credentials
+config/gcp-credentials.json
+
 # Docker
 .docker/
 docker-compose.override.yml

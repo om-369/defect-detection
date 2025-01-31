@@ -32,6 +32,7 @@ from flask_login import (
     logout_user,
 )
 from google.cloud import storage
+from google.oauth2 import service_account
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
@@ -146,7 +147,12 @@ MODEL_DOWNLOAD_ERROR_COUNT = Counter(
 model = None
 model_lock = threading.Lock()
 prediction_queue = queue.Queue()
-storage_client = storage.Client()
+
+# Load credentials securely
+credentials = service_account.Credentials.from_service_account_file(
+    'config/gcp-credentials.json'
+)
+storage_client = storage.Client(credentials=credentials)
 
 
 def download_model_from_gcs():

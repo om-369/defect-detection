@@ -4,12 +4,13 @@ import json
 import logging
 import os
 import shutil
+import threading
+import time
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
-
 import schedule
+
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +180,6 @@ class BackupScheduler:
         """Initialize the backup scheduler."""
         self.backup_manager = BackupManager()
         self.running = False
-        self.thread = None
 
     def start(self):
         """Start the backup scheduler."""
@@ -196,16 +196,13 @@ class BackupScheduler:
         )
 
         self.running = True
-        self.thread = threading.Thread(target=self._run_schedule, daemon=True)
-        self.thread.start()
+        self._run_schedule()
 
         logger.info("Backup scheduler started")
 
     def stop(self):
         """Stop the backup scheduler."""
         self.running = False
-        if self.thread:
-            self.thread.join()
         logger.info("Backup scheduler stopped")
 
     def _run_schedule(self):

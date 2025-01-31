@@ -6,7 +6,7 @@ import smtplib
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Any, Dict, List
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +64,12 @@ class EmailNotifier:
                 msg["X-Priority"] = "5"
 
             # Add timestamp and environment info to body
-            full_body = f"""
-            Timestamp: {datetime.utcnow().isoformat()}
-            Environment: {os.environ.get('ENVIRONMENT', 'development')}
-            Priority: {priority}
-            
-            {body}
-            """
+            full_body = (
+                f"Timestamp: {datetime.utcnow().isoformat()}\n"
+                f"Environment: {os.environ.get('ENVIRONMENT', 'development')}\n"
+                f"Priority: {priority}\n\n"
+                f"{body}"
+            )
 
             msg.attach(MIMEText(full_body, "plain"))
 
@@ -96,31 +95,27 @@ class EmailNotifier:
     def notify_high_defect_rate(self, defect_rate: float, threshold: float) -> bool:
         """Send notification when defect rate exceeds threshold."""
         subject = "High Defect Rate Alert"
-        body = f"""
-        The current defect detection rate ({defect_rate:.2f}%) has exceeded
-        the configured threshold ({threshold:.2f}%).
-        
-        Please investigate the production line for potential issues.
-        """
+        body = (
+            f"The current defect detection rate ({defect_rate:.2f}%) has exceeded\n"
+            f"the configured threshold ({threshold:.2f}%).\n\n"
+            f"Please investigate the production line for potential issues."
+        )
         return self.send_notification(subject, body, priority="high")
 
     def notify_system_status(self, status: Dict[str, Any]) -> bool:
         """Send system status notification."""
         subject = f"System Status: {status['overall_status']}"
-        body = f"""
-        System Health Check Summary:
-        
-        Overall Status: {status['overall_status']}
-        Healthy Checks: {status['healthy_checks']}/{status['total_checks']}
-        
-        Component Status:
-        {self._format_component_status(status['components'])}
-        
-        Performance Metrics:
-        - Average Response Time: {status['metrics']['avg_response_time']:.2f}ms
-        - Error Rate: {status['metrics']['error_rate']:.2f}%
-        - Memory Usage: {status['metrics']['memory_usage']:.1f}MB
-        """
+        body = (
+            f"System Health Check Summary:\n\n"
+            f"Overall Status: {status['overall_status']}\n"
+            f"Healthy Checks: {status['healthy_checks']}/{status['total_checks']}\n\n"
+            f"Component Status:\n"
+            f"{self._format_component_status(status['components'])}\n\n"
+            f"Performance Metrics:\n"
+            f"- Average Response Time: {status['metrics']['avg_response_time']:.2f}ms\n"
+            f"- Error Rate: {status['metrics']['error_rate']:.2f}%\n"
+            f"- Memory Usage: {status['metrics']['memory_usage']:.1f}MB"
+        )
         return self.send_notification(subject, body, priority="normal")
 
     def _format_component_status(self, components: Dict[str, str]) -> str:

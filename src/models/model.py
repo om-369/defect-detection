@@ -26,7 +26,9 @@ def create_model() -> Model:
     # Dense layers
     x = layers.Flatten()(x)
     x = layers.Dense(64, activation="relu")(x)
-    outputs = layers.Dense(MODEL_CONFIG["num_classes"], activation="sigmoid")(x)
+    outputs = layers.Dense(
+        MODEL_CONFIG["num_classes"], activation="sigmoid"
+    )(x)
 
     # Create model
     model = Model(inputs, outputs)

@@ -37,9 +37,7 @@ def create_model() -> Model:
     model.compile(
         optimizer=tf.keras.optimizers.Adam(),
         loss=tf.keras.losses.BinaryCrossentropy(),
-        metrics=[
-            "accuracy"
-        ]
+        metrics=["accuracy"],
     )
 
     return model

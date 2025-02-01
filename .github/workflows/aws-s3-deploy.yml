@@ -41,7 +41,7 @@ jobs:
       
       - name: Deploy to S3
         run: |
-          aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --delete
+          aws s3 sync dist/ s3://${{ aws-defect-det-user }} --delete
       
       - name: Invalidate CloudFront cache
         if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}

@@ -1,9 +1,10 @@
 """Training script for defect detection model."""
 
+from pathlib import Path
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from pathlib import Path
 import yaml
 
 from src.models.model import DefectDetectionModel

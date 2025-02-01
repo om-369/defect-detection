@@ -1,7 +1,6 @@
 """Tests for defect detection model."""
 
 import pytest
-
 import torch
 
 from src.models.model import DefectDetectionModel

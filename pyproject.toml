@@ -57,3 +57,5 @@ no_shell = false
 id = "B104"
 reason = "Binding to all interfaces is required and safe in Cloud Run environment"
 file = "app.py"
+
+

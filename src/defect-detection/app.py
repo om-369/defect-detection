@@ -34,7 +34,6 @@ from prometheus_client import (
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
-
 class Config:
     """Configuration management singleton class."""
 
@@ -58,11 +57,9 @@ class Config:
         return self.config.get(key, default)
 
 
-# Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "default-secret-key")
 
-# Initialize config
 config = Config()
 
 
@@ -82,7 +79,6 @@ class DefectDetectionApp:
         Path(self.upload_folder).mkdir(parents=True, exist_ok=True)
         Path(self.model_path).parent.mkdir(parents=True, exist_ok=True)
 
-        # Load model
         self.model = self.load_model()
 
     def load_model(self):
@@ -103,7 +99,6 @@ class DefectDetectionApp:
         )
 
 
-# Initialize defect detection app
 defect_app = DefectDetectionApp()
 
 
@@ -130,10 +125,8 @@ def download_model_from_gcs():
             logging.error("No model found in GCS bucket")
             return False
 
-        # Create models directory if it doesn't exist
         Path("models").mkdir(parents=True, exist_ok=True)
 
-        # Download the model
         model_blob.download_to_filename("models/model.pth")
         logging.info(f"Downloaded model from GCS: {latest_model}")
         return True
@@ -157,7 +150,6 @@ def load_model_safe():
 def predict(model, filepath):
     """Make prediction on image."""
     try:
-        # Prediction logic here
         result = {
             "class": 1,
             "confidence": 0.95,
@@ -179,11 +171,9 @@ class User(UserMixin):
         self.password_hash = password_hash
 
 
-# Mock user database (replace with real database in production)
 users = {"admin": User("1", "admin", generate_password_hash("admin"))}
 
 
-# Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
@@ -213,7 +203,6 @@ def save_prediction_history(image_path, result):
         json.dump(history, f, indent=2)
 
 
-# File upload configuration
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 Path(UPLOAD_FOLDER).mkdir(parents=True, exist_ok=True)
@@ -420,7 +409,6 @@ def batch_predict():
     })
 
 
-# Start time for uptime tracking
 start_time = time.time()
 
 

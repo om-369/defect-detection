@@ -8,10 +8,9 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Dict, Optional
 
 import torch
-import numpy as np
 import yaml
 from flask import (
     Flask,
@@ -19,14 +18,11 @@ from flask import (
     redirect,
     render_template,
     request,
-    send_file,
-    session,
     url_for,
 )
 from flask_login import (
     LoginManager,
     UserMixin,
-    current_user,
     login_required,
     login_user,
     logout_user,
@@ -79,9 +75,7 @@ class Config:
 
 # Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get(
-    "SECRET_KEY", "your-secret-key"
-)  # Change this in production
+app.secret_key = os.environ.get("SECRET_KEY", "your-secret-key")  # Change this in production
 
 # Initialize config
 config = Config()

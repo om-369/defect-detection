@@ -60,3 +60,6 @@ coverage/
 .coverage
 coverage.xml
 htmlcov/
+
+# Ignore hyphenated path
+src/defect-detection/

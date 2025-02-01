@@ -6,5 +6,7 @@ filename = *.py
 per-file-ignores =
     # Allow unused imports in __init__.py
     __init__.py: F401
-# Use this to map hyphenated paths to underscore paths
-import-paths = src/defect_detection
+# Map both hyphenated and underscore paths
+import-paths = src/defect_detection,src/defect-detection
+# Treat both paths as the same module
+module-naming-style = any

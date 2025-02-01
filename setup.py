@@ -10,7 +10,7 @@ setup(
     include_package_data=True,
     install_requires=[
         line.strip()
-        for line in open("requirements.txt")
+        for line in open("requirements.txt", encoding="utf-8")
         if line.strip() and not line.startswith("#")
     ],
     python_requires=">=3.12",  # Updated Python version requirement

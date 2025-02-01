@@ -9,7 +9,9 @@ import tensorflow as tf
 
 
 def plot_training_history(
-    history: Dict[str, List[float]], save_path: Optional[Path] = None, show: bool = True
+    history: Dict[str, List[float]],
+    save_path: Optional[Path] = None,
+    show: bool = True,
 ) -> None:
     """Plot training history metrics.
 

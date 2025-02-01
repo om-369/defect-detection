@@ -17,7 +17,7 @@ class DefectDetectionModel(nn.Module):
         """Initialize model architecture."""
         super().__init__()
         # Use ResNet18 backbone pretrained on ImageNet
-        self.backbone = models.resnet18(pretrained=True)
+        self.backbone = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         # Replace final layer for binary classification
         num_features = self.backbone.fc.in_features
         self.backbone.fc = nn.Sequential(
@@ -40,7 +40,7 @@ class DefectDetectionModel(nn.Module):
         return self.backbone(x)
 
     @staticmethod
-    def load_from_checkpoint(path: str) -> nn.Module:
+    def load_from_checkpoint(path: str) -> "DefectDetectionModel":
         """Load model from checkpoint file.
 
         Args:
@@ -51,6 +51,7 @@ class DefectDetectionModel(nn.Module):
         """
         model = DefectDetectionModel()
         model.load_state_dict(torch.load(path))
+        model.eval()
         return model
 
 

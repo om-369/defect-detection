@@ -1,15 +1,17 @@
 """Tests for preprocessing functionality."""
 
-import tempfile
+import os
 from pathlib import Path
 
-import cv2
 import numpy as np
 import pytest
+import torch
+from PIL import Image
 
-from src.preprocessing import load_dataset, preprocess
+from defect_detection.preprocessing import load_dataset, preprocess
 
 
+@pytest.mark.unit
 @pytest.fixture
 def test_data_dir():
     """Create temporary test data directory."""

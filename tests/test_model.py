@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from src.models.model import DefectDetectionModel
+from defect_detection.models.model import DefectDetectionModel
 
 
 @pytest.mark.unit

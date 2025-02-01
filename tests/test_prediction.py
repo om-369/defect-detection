@@ -1,12 +1,15 @@
-"""Tests for prediction functionality."""
+"""Tests for defect detection prediction."""
+
+import os
+from pathlib import Path
 
 import cv2
 import numpy as np
 import pytest
 import torch
 
-from src.models.model import DefectDetectionModel, predict
-from src.preprocessing import preprocess_image
+from defect_detection.models.model import DefectDetectionModel, predict
+from defect_detection.preprocessing import preprocess_image
 
 
 @pytest.fixture

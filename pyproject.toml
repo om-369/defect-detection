@@ -9,7 +9,6 @@ description = "A defect detection system using computer vision"
 authors = [
     {name = "Om-369", email = "author@example.com"}
 ]
-readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 classifiers = [
@@ -22,18 +21,15 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
+dynamic = ["readme", "dependencies"]
 
-dependencies = [
-    "numpy>=1.24.0",
-    "torch>=2.0.0",
-    "opencv-python>=4.8.0",
-    "flask>=2.0.0",
-    "flask-login>=0.6.0",
-    "prometheus_client>=0.17.0",
-    "google-cloud-storage>=2.10.0",
-    "pyyaml>=6.0.0",
-    "werkzeug>=2.0.0",
-]
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["defect_detection"]
+
+[tool.setuptools.dynamic]
+readme = {file = "README.md", content-type = "text/markdown"}
+dependencies = {file = "requirements.txt"}
 
 [project.optional-dependencies]
 dev = [
@@ -47,10 +43,6 @@ dev = [
 
 [project.scripts]
 defect-detect = "defect_detection.app:main"
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-packages = ["defect_detection"]
 
 [tool.black]
 line-length = 79

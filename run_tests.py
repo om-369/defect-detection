@@ -1,8 +1,10 @@
 """Script to run all tests and generate coverage report."""
+
 import argparse
 import subprocess
 import sys
 from pathlib import Path
+
 
 def run_tests(test_dir: str, coverage_dir: str) -> bool:
     """Run pytest with coverage reporting.
@@ -34,6 +36,7 @@ def run_tests(test_dir: str, coverage_dir: str) -> bool:
     except subprocess.CalledProcessError:
         return False
 
+
 def main():
     """Run test suite."""
     parser = argparse.ArgumentParser(description="Run test suite with coverage")
@@ -51,6 +54,7 @@ def main():
 
     success = run_tests(args.test_dir, args.coverage_dir)
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

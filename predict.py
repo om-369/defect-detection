@@ -38,6 +38,7 @@ def process_directory(model: DefectDetectionModel, directory: str) -> list:
     Returns:
         List of PredictionResult objects
     """
+
     results = []
     dir_path = Path(directory)
     image_files = list(dir_path.glob("*.jpg"))
@@ -60,6 +61,7 @@ def save_results(results: list, output_path: str) -> None:
         results: List of PredictionResult objects
         output_path: Path to save results
     """
+
     output_data = []
     for result in results:
         output_data.append({

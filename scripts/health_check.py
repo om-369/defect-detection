@@ -2,12 +2,13 @@
 
 import json
 import logging
-import os
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, Optional
 
 import requests
+
 
 # Configure logging
 logging.basicConfig(
@@ -140,7 +141,7 @@ class HealthChecker:
 
 def main():
     """Main entry point."""
-    base_url = os.getenv("SERVICE_URL", "http://localhost:5000")
+    base_url = "http://localhost:5000"
     checker = HealthChecker(base_url)
     checker.monitor()
 

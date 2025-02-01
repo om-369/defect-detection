@@ -1,6 +1,5 @@
 """Script to organize welding images into labeled directories."""
 
-import os
 import shutil
 from pathlib import Path
 

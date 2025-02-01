@@ -8,6 +8,9 @@ import numpy as np
 import torch
 
 
+__all__ = ["load_dataset", "preprocess", "preprocess_batch"]
+
+
 def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
     """Load dataset from directory.
     Args:
@@ -49,11 +52,11 @@ def preprocess_batch(images: List[np.ndarray]) -> torch.Tensor:
         Preprocessed images as a torch tensor
     """
     # Convert to torch tensor
-    batch = torch.stack([preprocess_image(img) for img in images])
+    batch = torch.stack([preprocess(img) for img in images])
     return batch
 
 
-def preprocess_image(image: np.ndarray) -> torch.Tensor:
+def preprocess(image: np.ndarray) -> torch.Tensor:
     """Preprocess a single image.
     Args:
         image: Input image array

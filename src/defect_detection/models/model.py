@@ -16,8 +16,9 @@ class DefectDetectionModel(nn.Module):
     def __init__(self):
         """Initialize model architecture."""
         super().__init__()
-        # Use ResNet18 backbone pretrained on ImageNet
-        self.backbone = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        # Initialize ResNet18 with pretrained weights
+        weights = models.ResNet18_Weights.DEFAULT
+        self.backbone = models.resnet18(weights=weights)
         # Replace final layer for binary classification
         num_features = self.backbone.fc.in_features
         self.backbone.fc = nn.Sequential(

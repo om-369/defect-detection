@@ -1,8 +1,5 @@
 """Tests for defect detection prediction."""
 
-import os
-from pathlib import Path
-
 import cv2
 import numpy as np
 import pytest

@@ -1,7 +1,7 @@
 """Visualization utilities."""
 
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,7 +9,7 @@ import tensorflow as tf
 
 
 def plot_training_history(
-    history: Dict[str, List[float]], save_path: Path = None, show: bool = True
+    history: Dict[str, List[float]], save_path: Optional[Path] = None, show: bool = True
 ) -> None:
     """Plot training history metrics.
 
@@ -54,7 +54,7 @@ def plot_predictions(
     images: np.ndarray,
     labels: np.ndarray,
     num_samples: int = 5,
-    save_path: Path = None,
+    save_path: Optional[Path] = None,
     show: bool = True,
 ) -> None:
     """Plot model predictions on sample images.

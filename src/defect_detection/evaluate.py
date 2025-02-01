@@ -1,17 +1,19 @@
 """Module for evaluating the defect detection model."""
+
 import logging
 from pathlib import Path
-import torch
-from torch.utils.data import DataLoader
-from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
-from .models import DefectDetectionModel
+import torch
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from torch.utils.data import DataLoader
+
 from .data import DefectDataset
+from .models import DefectDetectionModel
 
 logger = logging.getLogger(__name__)
 
 
-def load_model(model_path: str) -> DefectDetectionModel:
+def load_model(model_path):
     """Load the trained model from disk.
 
     Args:
@@ -30,7 +32,7 @@ def load_model(model_path: str) -> DefectDetectionModel:
         raise
 
 
-def evaluate_model(test_data_dir: str = 'data/test', model_path: str = 'models/model.pth') -> dict:
+def evaluate_model(test_data_dir="data/test", model_path="models/model.pth"):
     """Evaluate model performance on test dataset.
 
     Args:
@@ -47,10 +49,7 @@ def evaluate_model(test_data_dir: str = 'data/test', model_path: str = 'models/m
         # Prepare test data
         test_dataset = DefectDataset(Path(test_data_dir))
         test_loader = DataLoader(
-            test_dataset,
-            batch_size=32,
-            shuffle=False,
-            num_workers=4
+            test_dataset, batch_size=32, shuffle=False, num_workers=4
         )
 
         # Evaluate
@@ -70,17 +69,15 @@ def evaluate_model(test_data_dir: str = 'data/test', model_path: str = 'models/m
 
         # Calculate metrics
         precision, recall, f1, _ = precision_recall_fscore_support(
-            true_labels,
-            pred_labels,
-            average='binary'
+            true_labels, pred_labels, average="binary"
         )
         accuracy = accuracy_score(true_labels, pred_labels)
 
         metrics = {
-            'accuracy': float(accuracy),
-            'precision': float(precision),
-            'recall': float(recall),
-            'f1_score': float(f1)
+            "accuracy": float(accuracy),
+            "precision": float(precision),
+            "recall": float(recall),
+            "f1_score": float(f1),
         }
 
         logger.info(f"Evaluation metrics: {metrics}")
@@ -91,6 +88,6 @@ def evaluate_model(test_data_dir: str = 'data/test', model_path: str = 'models/m
         raise
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     evaluate_model()

@@ -98,10 +98,11 @@ jobs:
         run: python -m build
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
+          retention-days: 5
 
       - name: Deploy to PyPI
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

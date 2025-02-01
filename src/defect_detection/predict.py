@@ -1,4 +1,4 @@
-"""Script for making predictions with trained model."""
+"""Module for making predictions using the trained model."""
 
 import argparse
 import json
@@ -9,13 +9,14 @@ import cv2
 import numpy as np
 import torch
 from PIL import Image
-from tqdm import tqdm
 from torchvision import transforms
+from tqdm import tqdm
 
-from defect_detection.models.model import DefectDetectionModel
+from .models import DefectDetectionModel
 
 logger = logging.getLogger(__name__)
 
+# Define image transformations
 transform = transforms.Compose(
     [
         transforms.Resize((224, 224)),
@@ -135,12 +136,14 @@ def save_results(results: list, output_path: str) -> None:
 
     output_data = []
     for result in results:
-        output_data.append({
-            "filename": result.filename,
-            "class": result.class_id,
-            "confidence": result.confidence,
-            "probabilities": result.probabilities,
-        })
+        output_data.append(
+            {
+                "filename": result.filename,
+                "class": result.class_id,
+                "confidence": result.confidence,
+                "probabilities": result.probabilities,
+            }
+        )
 
     with open(output_path, "w") as f:
         json.dump(output_data, f, indent=2)

@@ -20,8 +20,7 @@ class DefectDataset(Dataset):
         self.transform = transform
         self.image_paths = list(self.data_dir.glob("**/*.jpg"))
         self.labels = [
-            1 if "defect" in str(path).lower() else 0
-            for path in self.image_paths
+            1 if "defect" in str(path).lower() else 0 for path in self.image_paths
         ]
 
     def __len__(self):
@@ -123,25 +122,12 @@ if __name__ == "__main__":
     train_dataset = DefectDataset("data/train")
     val_dataset = DefectDataset("data/val")
 
-    train_loader = DataLoader(
-        train_dataset, batch_size=32, shuffle=True, num_workers=4
-    )
-    val_loader = DataLoader(
-        val_dataset, batch_size=32, shuffle=False, num_workers=4
-    )
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 
     # Initialize and train model
     model = DefectDataset().to(device)
-    model = train_model(
-        model,
-        train_loader,
-        val_loader,
-        num_epochs=10,
-        device=device
-    )
+    model = train_model(model, train_loader, val_loader, num_epochs=10, device=device)
 
     # Save model
-    save_model(
-        model,
-        "models/defect_detection_model.pth"
-    )
+    save_model(model, "models/defect_detection_model.pth")

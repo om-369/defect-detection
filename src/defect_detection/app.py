@@ -1,16 +1,16 @@
 """Flask application for defect detection."""
+
 import logging
 import os
 import time
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request
 from flask_login import LoginManager, login_required
 from prometheus_client import Counter, Histogram, start_http_server
 
 from .evaluate import evaluate_model
 from .predict import predict_image
 from .train import train_model
-
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "default-secret-key")
@@ -22,7 +22,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Metrics
-PREDICTION_TIME = Histogram("prediction_time_seconds", "Time spent processing prediction")
+PREDICTION_TIME = Histogram(
+    "prediction_time_seconds", "Time spent processing prediction"
+)
 PREDICTION_COUNT = Counter("prediction_total", "Total number of predictions")
 
 # Login manager setup

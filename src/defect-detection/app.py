@@ -34,6 +34,7 @@ from prometheus_client import (
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
+
 class Config:
     """Configuration management singleton class."""
 
@@ -69,9 +70,7 @@ class DefectDetectionApp:
     def __init__(self):
         """Initialize defect detection app."""
         self.model_path = config.get("model_path", "models/latest")
-        self.confidence_threshold = float(
-            config.get("confidence_threshold", "0.5")
-        )
+        self.confidence_threshold = float(config.get("confidence_threshold", "0.5"))
         self.upload_folder = config.get("upload_folder", "uploads")
         self.allowed_extensions = set(
             config.get("allowed_extensions", ["png", "jpg", "jpeg"])
@@ -193,11 +192,13 @@ def save_prediction_history(image_path, result):
         with open(history_file) as f:
             history = json.load(f)
 
-    history.append({
-        "timestamp": datetime.now().isoformat(),
-        "image": str(image_path),
-        "result": result,
-    })
+    history.append(
+        {
+            "timestamp": datetime.now().isoformat(),
+            "image": str(image_path),
+            "result": result,
+        }
+    )
 
     with open(history_file, "w") as f:
         json.dump(history, f, indent=2)
@@ -262,10 +263,12 @@ def predict_defect():
         result = predict(defect_app.model, str(filepath))
         save_prediction_history(filepath, result)
 
-        return jsonify({
-            "filename": filename,
-            "prediction": result,
-        })
+        return jsonify(
+            {
+                "filename": filename,
+                "prediction": result,
+            }
+        )
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -313,16 +316,23 @@ def health():
         uptime = time.time() - start_time
         model_loaded = defect_app.model is not None
 
-        return jsonify({
-            "status": "healthy",
-            "uptime": uptime,
-            "model_loaded": model_loaded,
-        })
+        return jsonify(
+            {
+                "status": "healthy",
+                "uptime": uptime,
+                "model_loaded": model_loaded,
+            }
+        )
     except Exception as e:
-        return jsonify({
-            "status": "unhealthy",
-            "error": str(e),
-        }), 500
+        return (
+            jsonify(
+                {
+                    "status": "unhealthy",
+                    "error": str(e),
+                }
+            ),
+            500,
+        )
 
 
 @app.route("/reload", methods=["POST"])
@@ -332,19 +342,28 @@ def reload_model():
     try:
         if download_model_from_gcs():
             load_model_safe()
-            return jsonify({
-                "status": "success",
-                "message": "Model reloaded successfully",
-            })
-        return jsonify({
-            "status": "unchanged",
-            "message": "No new model available",
-        })
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": "Model reloaded successfully",
+                }
+            )
+        return jsonify(
+            {
+                "status": "unchanged",
+                "message": "No new model available",
+            }
+        )
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e),
-        }), 500
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": str(e),
+                }
+            ),
+            500,
+        )
 
 
 @app.route("/metrics")
@@ -396,17 +415,21 @@ def batch_predict():
             result = predict(defect_app.model, str(filepath))
             save_prediction_history(filepath, result)
 
-            results.append({
-                "filename": filename,
-                "prediction": result,
-            })
+            results.append(
+                {
+                    "filename": filename,
+                    "prediction": result,
+                }
+            )
         except Exception as e:
             errors.append(f"Error processing {file.filename}: {str(e)}")
 
-    return jsonify({
-        "results": results,
-        "errors": errors,
-    })
+    return jsonify(
+        {
+            "results": results,
+            "errors": errors,
+        }
+    )
 
 
 start_time = time.time()

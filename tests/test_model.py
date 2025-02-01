@@ -1,8 +1,8 @@
 """Tests for defect detection model."""
 
+import pytest
 import torch
 from src.models.model import DefectDetectionModel
-import pytest
 
 
 @pytest.mark.unit

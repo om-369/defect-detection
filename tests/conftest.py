@@ -6,7 +6,6 @@ import cv2
 import numpy as np
 import pytest
 
-
 @pytest.fixture
 def test_data_dir(tmp_path):
     """Create test data directory."""

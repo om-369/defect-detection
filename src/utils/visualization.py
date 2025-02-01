@@ -1,10 +1,11 @@
 """Visualization utilities."""
 
 from pathlib import Path
+from typing import Dict, List
+
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from typing import Dict, List
 
 
 def plot_training_history(

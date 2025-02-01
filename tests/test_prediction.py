@@ -1,9 +1,10 @@
 """Tests for prediction functionality."""
 
+import cv2
+import numpy as np
 import pytest
 import torch
-import numpy as np
-import cv2
+
 from src.models.model import DefectDetectionModel, predict
 from src.preprocessing import preprocess_image
 

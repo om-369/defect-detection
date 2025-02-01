@@ -1,16 +1,15 @@
 """Training script for defect detection model."""
 
-from pathlib import Path
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from pathlib import Path
 import yaml
 
 from src.models.model import DefectDetectionModel
 from src.preprocessing import load_dataset, preprocess_batch
 from src.utils.backup import create_backup
-from src.utils.notifications import setup_logging, log_training_metrics
+from src.utils.notifications import log_training_metrics, setup_logging
 
 
 def load_config():

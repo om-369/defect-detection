@@ -1,9 +1,9 @@
-"""Setup script for the defect-detection package."""
+"""Setup script for the defect_detection package."""
 
 from setuptools import setup, find_packages
 
 setup(
-    name="defect-detection",
+    name="defect_detection",
     version="0.1.0",
     packages=find_packages(),
     include_package_data=True,

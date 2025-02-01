@@ -7,7 +7,6 @@ import cv2
 import numpy as np
 import torch
 
-
 __all__ = ["load_dataset", "preprocess", "preprocess_batch"]
 
 

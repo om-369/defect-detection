@@ -1,6 +1,6 @@
 """Source code for the defect detection project."""
 
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 
 from .preprocessing import load_dataset, preprocess, preprocess_batch
 

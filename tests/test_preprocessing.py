@@ -37,10 +37,10 @@ def test_preprocess():
     """Test image preprocessing."""
     # Create a test image
     image = np.random.randint(0, 255, (100, 150, 3), dtype=np.uint8)
-    
+
     # Test preprocessing
     result = preprocessing.preprocess(image)
-    
+
     # Check output properties
     assert isinstance(result, torch.Tensor)
     assert result.shape == (3, 224, 224)  # CHW format

@@ -24,7 +24,7 @@ RUN useradd -m -u 1000 appuser
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-glx \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
@@ -39,29 +39,33 @@ RUN pip install --no-cache /wheels/*
 # Copy application code
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p uploads models
+# Create necessary directories with proper permissions
+RUN mkdir -p uploads models && \
+    chown -R appuser:appuser /app && \
+    chmod -R 755 /app
 
-# Set ownership to non-root user
-RUN chown -R appuser:appuser /app
+# Set secure file permissions
+RUN find /app -type f -exec chmod 644 {} \; && \
+    find /app -type d -exec chmod 755 {} \;
 
 # Switch to non-root user
 USER appuser
 
 # Set environment variables
-ARG SECRET_KEY
-ENV SECRET_KEY=${SECRET_KEY}
-ENV FLASK_APP=app.py
-ENV FLASK_ENV=production
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/home/appuser/.local/bin:$PATH"
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+# Set secure Python options
+ENV PYTHONWARNINGS=ignore \
+    PYTHONHASHSEED=random
 
 # Expose port
 EXPOSE 8080
 
-# Run the application with proper timeout and worker configuration
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "--threads", "2", "--timeout", "120", "app:app"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Run with gunicorn for production
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "--threads", "2", "--timeout", "60", "src.defect_detection.app:app"]

@@ -1,3 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "defect_detection"
+version = "0.1.0"
+description = "Defect detection using computer vision"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.2.0",
+    "torch>=2.0.0",
+    "opencv-python>=4.11.0",
+    "pillow>=11.1.0",
+    "flask>=3.1.0",
+    "flask-login>=0.6.3",
+    "prometheus_client>=0.21.0",
+    "google-cloud-storage>=3.0.0",
+    "pyyaml>=6.0.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["defect_detection"]
+
 [tool.black]
 line-length = 88
 target-version = ['py310']

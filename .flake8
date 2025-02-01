@@ -2,6 +2,9 @@
 max-line-length = 79
 exclude = .git,__pycache__,build,dist,*.egg-info
 extend-ignore = E203, W503
+filename = *.py
 per-file-ignores =
     # Allow unused imports in __init__.py
     __init__.py: F401
+# Use this to map hyphenated paths to underscore paths
+import-paths = src/defect_detection

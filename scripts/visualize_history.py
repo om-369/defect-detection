@@ -4,6 +4,7 @@ import argparse
 import json
 import matplotlib.pyplot as plt
 
+
 def plot_training_history(history_file: str, output_file: str) -> None:
     """Plot training history from JSON file.
 
@@ -46,9 +47,19 @@ def plot_training_history(history_file: str, output_file: str) -> None:
 
 def main():
     """Visualize training history."""
-    parser = argparse.ArgumentParser(description="Visualize model training history")
-    parser.add_argument("--history", required=True, help="Path to training history JSON file")
-    parser.add_argument("--output", default="training_history.png", help="Path to save plot")
+    parser = argparse.ArgumentParser(
+        description="Visualize model training history"
+    )
+    parser.add_argument(
+        "--history",
+        required=True,
+        help="Path to training history JSON file",
+    )
+    parser.add_argument(
+        "--output",
+        default="training_history.png",
+        help="Path to save plot",
+    )
     args = parser.parse_args()
 
     plot_training_history(args.history, args.output)

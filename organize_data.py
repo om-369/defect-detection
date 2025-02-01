@@ -1,5 +1,6 @@
 """Script to organize welding images into labeled directories."""
 
+import os
 import shutil
 from pathlib import Path
 
@@ -48,40 +49,27 @@ def organize_data():
 
     # Get list of images in raw directory
     raw_images = list(RAW_DIR.glob("*.jpg"))
-    print(f"Found {len(raw_images)} images in raw directory")
-
-    defect_count = 0
-    no_defect_count = 0
-    unmatched_count = 0
+    print(f"Found {len(raw_images)} images")
 
     # Process each image
     for img_path in raw_images:
-        print(f"\nProcessing: {img_path.name}")
-        print(f"Base name: {get_base_name(img_path.stem)}")
+        # Check if label file exists
+        has_label = check_label_file_exists(RAW_DIR, img_path)
 
-        # Check if there's a corresponding label file in defect directory
-        if check_label_file_exists(defect_dir, img_path):
-            # Copy to defect directory
-            target_path = defect_dir / img_path.name
-            if not target_path.exists():  # Only copy if not already there
-                shutil.copy2(str(img_path), str(target_path))
-                defect_count += 1
-                print("-> Copied to defect directory")
-        # Check in no_defect directory
-        elif check_label_file_exists(no_defect_dir, img_path):
-            target_path = no_defect_dir / img_path.name
-            if not target_path.exists():  # Only copy if not already there
-                shutil.copy2(str(img_path), str(target_path))
-                no_defect_count += 1
-                print("-> Copied to no_defect directory")
+        # Move to appropriate directory
+        if has_label:
+            dest_dir = defect_dir
         else:
-            unmatched_count += 1
-            print("-> No label found")
+            dest_dir = no_defect_dir
 
-    print(f"\nSummary:")
-    print(f"- Organized {defect_count} defect images")
-    print(f"- Organized {no_defect_count} no-defect images")
-    print(f"- Found {unmatched_count} images without labels")
+        # Copy image to destination
+        shutil.copy2(img_path, dest_dir / img_path.name)
+
+    # Print summary
+    defect_count = len(list(defect_dir.glob("*.jpg")))
+    no_defect_count = len(list(no_defect_dir.glob("*.jpg")))
+    print(f"Organized {defect_count} defect images")
+    print(f"Organized {no_defect_count} no-defect images")
 
 
 if __name__ == "__main__":

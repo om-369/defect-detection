@@ -12,12 +12,12 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from src.config import MODEL_CONFIG
 from src.data.preprocessing import create_dataset
 
 
 def evaluate_model(
-    model_path: str = "models/latest", test_data_dir: str = "data/labeled"
+    model_path: str = "models/latest",
+    test_data_dir: str = "data/labeled",
 ) -> dict:
     """Evaluate the model on test data.
 
@@ -29,7 +29,7 @@ def evaluate_model(
         Dictionary containing evaluation metrics
     """
     print("Loading model...")
-    model = MODEL_CONFIG.load_model(model_path)
+    model = torch.load(model_path)
 
     print("Loading test data...")
     test_dir = Path(test_data_dir)
@@ -47,7 +47,12 @@ def evaluate_model(
     all_labels = defect_labels + no_defect_labels
 
     # Create dataset
-    test_dataset = create_dataset(all_images, all_labels, batch_size=32, augment=False)
+    test_dataset = create_dataset(
+        all_images,
+        all_labels,
+        batch_size=32,
+        augment=False,
+    )
 
     print("Making predictions...")
     predictions = []

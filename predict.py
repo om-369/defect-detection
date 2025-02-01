@@ -60,9 +60,9 @@ def save_results(results: list, output_path: str) -> None:
         results: List of PredictionResult objects
         output_path: Path to save results
     """
-    output = []
+    output_data = []
     for result in results:
-        output.append({
+        output_data.append({
             "filename": result.filename,
             "class": result.class_id,
             "confidence": result.confidence,
@@ -70,53 +70,46 @@ def save_results(results: list, output_path: str) -> None:
         })
 
     with open(output_path, "w") as f:
-        json.dump(output, f, indent=2)
+        json.dump(output_data, f, indent=2)
 
 
 def main():
     """Run predictions on images."""
     parser = argparse.ArgumentParser(description="Run defect detection predictions")
-    parser.add_argument("--model", required=True, help="Path to model weights")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="models/model.pth",
+        help="Path to trained model",
+    )
     parser.add_argument(
         "--input",
+        type=str,
         required=True,
-        help="Path to input directory or image",
+        help="Path to input directory containing images",
     )
-    parser.add_argument("--output", help="Path to save results JSON")
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="predictions.json",
+        help="Path to save prediction results",
+    )
     args = parser.parse_args()
 
     # Load model
+    print("Loading model...")
     model = DefectDetectionModel()
     model.load_state_dict(torch.load(args.model))
     model.eval()
 
-    # Process input
-    input_path = Path(args.input)
-    if input_path.is_file():
-        # Single image
-        try:
-            result = predict(model, str(input_path))
-            print(f"\nPrediction for {input_path.name}:")
-            print(f"Class: {'Defect' if result['class'] == 1 else 'No defect'}")
-            print(f"Confidence: {result['confidence']:.1f}%")
-        except Exception as e:
-            print(f"Error processing {input_path}: {e}")
-    else:
-        # Directory of images
-        results = process_directory(model, str(input_path))
+    # Process images
+    print("Processing images...")
+    results = process_directory(model, args.input)
 
-        # Print summary
-        print("\nPrediction Summary:")
-        defect_count = sum(1 for r in results if r.class_id == 1)
-        total = len(results)
-        print(f"Total images processed: {total}")
-        print(f"Defects detected: {defect_count}")
-        print(f"No defects detected: {total - defect_count}")
-
-        # Save results if output path provided
-        if args.output:
-            save_results(results, args.output)
-            print(f"\nResults saved to {args.output}")
+    # Save results
+    print("Saving results...")
+    save_results(results, args.output)
+    print(f"Results saved to {args.output}")
 
 
 if __name__ == "__main__":

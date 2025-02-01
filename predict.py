@@ -1,120 +1,119 @@
 """Script for making predictions with trained model."""
 
-import torch
+import argparse
+import json
 from pathlib import Path
-import yaml
-from prometheus_client import Counter, start_http_server
 
-from src.models.model import DefectDetectionModel
-from src.preprocessing import preprocess
-from src.utils.notifications import setup_logging, log_prediction
+import cv2
+import numpy as np
+import torch
+from tqdm import tqdm
 
-# Prometheus metrics
-PREDICTION_COUNTER = Counter(
-    'defect_predictions_total',
-    'Total number of defect predictions made',
-    ['predicted_class']
-)
+from defect_detection.models.model import DefectDetectionModel, predict
 
-def load_config():
-    """Load configuration from yaml file."""
-    config_path = Path("config/config.yaml")
-    with open(config_path) as f:
-        return yaml.safe_load(f)
 
-def load_model(checkpoint_path, num_classes):
-    """Load trained model from checkpoint.
+class PredictionResult:
+    """Container for prediction results."""
 
-    Args:
-        checkpoint_path (str): Path to model checkpoint
-        num_classes (int): Number of classes
+    def __init__(self, filename: str, prediction: dict):
+        """Initialize prediction result.
 
-    Returns:
-        DefectDetectionModel: Loaded model
-    """
-    model = DefectDetectionModel(num_classes=num_classes)
-    model.load_state_dict(torch.load(checkpoint_path))
-    model.eval()
-    return model
+        Args:
+            filename: Name of the image file
+            prediction: Dictionary containing prediction details
+        """
+        self.filename = filename
+        self.class_id = prediction["class"]
+        self.confidence = prediction["confidence"]
+        self.probabilities = prediction["all_probabilities"]
 
-def predict_image(model, image_path, logger):
-    """Make prediction for a single image.
+
+def process_directory(model: DefectDetectionModel, directory: str) -> list:
+    """Process all images in a directory.
 
     Args:
-        model (DefectDetectionModel): Trained model
-        image_path (str): Path to input image
-        logger (logging.Logger): Logger instance
+        model: Trained model
+        directory: Directory containing images
 
     Returns:
-        dict: Prediction results
+        List of PredictionResult objects
     """
-    # Preprocess image
-    image = preprocess(image_path)
-    image_tensor = torch.tensor(image).unsqueeze(0)
+    results = []
+    dir_path = Path(directory)
+    image_files = list(dir_path.glob("*.jpg"))
 
-    # Make prediction
-    with torch.no_grad():
-        outputs = model(image_tensor)
-        probabilities = torch.softmax(outputs, dim=1)[0]
-        predicted_class = int(torch.argmax(probabilities))
-        confidence = float(probabilities[predicted_class]) * 100
+    for img_path in tqdm(image_files, desc="Processing images"):
+        try:
+            prediction = predict(model, str(img_path))
+            result = PredictionResult(img_path.name, prediction)
+            results.append(result)
+        except Exception as e:
+            print(f"Error processing {img_path}: {e}")
 
-    # Create result dictionary
-    result = {
-        'class': predicted_class,
-        'confidence': confidence,
-        'all_probabilities': {
-            i: float(prob) * 100
-            for i, prob in enumerate(probabilities)
-        }
-    }
+    return results
 
-    # Log prediction
-    log_prediction(logger, image_path, result)
 
-    # Update Prometheus metrics
-    PREDICTION_COUNTER.labels(predicted_class=str(predicted_class)).inc()
+def save_results(results: list, output_path: str) -> None:
+    """Save prediction results to JSON file.
 
-    return result
+    Args:
+        results: List of PredictionResult objects
+        output_path: Path to save results
+    """
+    output = []
+    for result in results:
+        output.append({
+            "filename": result.filename,
+            "class": result.class_id,
+            "confidence": result.confidence,
+            "probabilities": result.probabilities,
+        })
+
+    with open(output_path, "w") as f:
+        json.dump(output, f, indent=2)
+
 
 def main():
-    """Main prediction function."""
-    # Load configuration
-    config = load_config()
-
-    # Setup logging
-    logger = setup_logging(config['logging']['log_dir'])
-    logger.info("Starting prediction service...")
-
-    # Start Prometheus metrics server
-    start_http_server(config['monitoring']['prometheus_port'])
-    logger.info(
-        f"Started Prometheus metrics server on port "
-        f"{config['monitoring']['prometheus_port']}"
-    )
+    """Run predictions on images."""
+    parser = argparse.ArgumentParser(description="Run defect detection predictions")
+    parser.add_argument("--model", required=True, help="Path to model weights")
+    parser.add_argument("--input", required=True, help="Path to input directory or image")
+    parser.add_argument("--output", help="Path to save results JSON")
+    args = parser.parse_args()
 
     # Load model
-    checkpoint_path = (
-        Path(config['model']['checkpoint_dir']) / 'best_model.pth'
-    )
-    try:
-        model = load_model(
-            checkpoint_path,
-            config['model']['num_classes']
-        )
-        logger.info("Model loaded successfully")
-    except Exception as e:
-        logger.error(f"Failed to load model: {str(e)}")
-        raise
+    model = DefectDetectionModel()
+    model.load_state_dict(torch.load(args.model))
+    model.eval()
 
-    # Example prediction
-    try:
-        image_path = "data/test/test_image.jpg"
-        result = predict_image(model, image_path, logger)
-        print(f"Prediction result: {result}")
-    except Exception as e:
-        logger.error(f"Prediction failed: {str(e)}")
-        raise
+    # Process input
+    input_path = Path(args.input)
+    if input_path.is_file():
+        # Single image
+        try:
+            result = predict(model, str(input_path))
+            print(f"\nPrediction for {input_path.name}:")
+            print(f"Class: {'Defect' if result['class'] == 1 else 'No defect'}")
+            print(f"Confidence: {result['confidence']:.1f}%")
+        except Exception as e:
+            print(f"Error processing {input_path}: {e}")
+    else:
+        # Directory of images
+        results = process_directory(model, str(input_path))
+        
+        # Print summary
+        print("\nPrediction Summary:")
+        defect_count = sum(1 for r in results if r.class_id == 1)
+        total = len(results)
+        print(f"Total images processed: {total}")
+        print(f"Defects detected: {defect_count}")
+        print(f"No defects detected: {total - defect_count}")
+
+        # Save results if output path provided
+        if args.output:
+            save_results(results, args.output)
+            print(f"\nResults saved to {args.output}")
+
 
 if __name__ == "__main__":
     main()

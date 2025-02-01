@@ -1,72 +1,59 @@
-"""Script to run automated tests with coverage."""
+"""Script to run all tests and generate coverage report."""
 
+import argparse
 import subprocess
 import sys
 from pathlib import Path
-import yaml
 
 
-def load_config():
-    """Load configuration from yaml file."""
-    config_path = Path("config/config.yaml")
-    with open(config_path) as f:
-        return yaml.safe_load(f)
+def run_tests(test_dir: str, coverage_dir: str) -> bool:
+    """Run pytest with coverage reporting.
 
+    Args:
+        test_dir: Directory containing tests
+        coverage_dir: Directory to save coverage reports
 
-def run_tests():
-    """Run pytest with coverage."""
+    Returns:
+        True if all tests pass, False otherwise
+    """
+    # Ensure coverage directory exists
+    Path(coverage_dir).mkdir(parents=True, exist_ok=True)
+
     # Run tests with coverage
-    result = subprocess.run([
+    cmd = [
         "pytest",
+        test_dir,
+        "-v",
         "--cov=src",
-        "--cov-report=xml",
         "--cov-report=term-missing",
-        "tests/"
-    ], capture_output=True, text=True)
+        f"--cov-report=html:{coverage_dir}/htmlcov",
+        f"--cov-report=xml:{coverage_dir}/coverage.xml",
+    ]
 
-    # Print test output
-    print(result.stdout)
-    if result.stderr:
-        print("Errors:", file=sys.stderr)
-        print(result.stderr, file=sys.stderr)
-
-    return result.returncode == 0
-
-
-def run_linting():
-    """Run flake8 linting."""
-    result = subprocess.run([
-        "flake8",
-        "src/",
-        "tests/"
-    ], capture_output=True, text=True)
-
-    if result.stdout:
-        print("Linting issues found:")
-        print(result.stdout)
-    if result.stderr:
-        print("Linting errors:", file=sys.stderr)
-        print(result.stderr, file=sys.stderr)
-
-    return result.returncode == 0
+    try:
+        subprocess.run(cmd, check=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 
 def main():
-    """Main function to run tests and linting."""
-    print("Running tests with coverage...")
-    tests_passed = run_tests()
-    
-    print("\nRunning linting checks...")
-    linting_passed = run_linting()
+    """Run test suite."""
+    parser = argparse.ArgumentParser(description="Run test suite with coverage")
+    parser.add_argument(
+        "--test-dir",
+        default="tests",
+        help="Directory containing tests",
+    )
+    parser.add_argument(
+        "--coverage-dir",
+        default="coverage",
+        help="Directory to save coverage reports",
+    )
+    args = parser.parse_args()
 
-    if not tests_passed:
-        print("❌ Tests failed!")
-        sys.exit(1)
-    if not linting_passed:
-        print("❌ Linting checks failed!")
-        sys.exit(1)
-    
-    print("✅ All checks passed!")
+    success = run_tests(args.test_dir, args.coverage_dir)
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

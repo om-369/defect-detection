@@ -6,7 +6,6 @@ import os
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
 
 import requests
 
@@ -37,7 +36,7 @@ class HealthChecker:
             "metrics": "/metrics",
         }
 
-    def check_endpoint(self, endpoint: str) -> Tuple[bool, Dict[str, Any]]:
+    def check_endpoint(self, endpoint: str) -> tuple:
         """Check a specific endpoint."""
         try:
             url = f"{self.base_url}{endpoint}"
@@ -48,7 +47,7 @@ class HealthChecker:
             logger.error(f"Error checking {endpoint}: {str(e)}")
             return False, {"error": str(e)}
 
-    def check_prediction(self, test_image_path: str) -> Tuple[bool, Dict[str, Any]]:
+    def check_prediction(self, test_image_path: str) -> tuple:
         """Test prediction endpoint with a sample image."""
         try:
             url = f"{self.base_url}/predict"
@@ -60,7 +59,7 @@ class HealthChecker:
             logger.error(f"Error testing prediction: {str(e)}")
             return False, {"error": str(e)}
 
-    def run_health_check(self) -> Dict[str, Any]:
+    def run_health_check(self) -> dict:
         """Run a complete health check."""
         results = {
             "timestamp": datetime.utcnow().isoformat(),
@@ -98,7 +97,7 @@ class HealthChecker:
 
         return results
 
-    def save_results(self, results: Dict[str, Any]) -> None:
+    def save_results(self, results: dict) -> None:
         """Save health check results to file."""
         output_dir = Path("monitoring/health_checks")
         output_dir.mkdir(parents=True, exist_ok=True)

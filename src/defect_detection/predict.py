@@ -9,7 +9,8 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from defect_detection.models.model import DefectDetectionModel, predict
+from defect_detection.models.model import DefectDetectionModel
+from defect_detection.predict import predict_image
 
 
 class PredictionResult:
@@ -45,7 +46,7 @@ def process_directory(model: DefectDetectionModel, directory: str) -> list:
 
     for img_path in tqdm(image_files, desc="Processing images"):
         try:
-            prediction = predict(model, str(img_path))
+            prediction = predict_image(str(img_path))
             result = PredictionResult(img_path.name, prediction)
             results.append(result)
         except Exception as e:

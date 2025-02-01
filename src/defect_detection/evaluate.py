@@ -1,112 +1,96 @@
-"""Module for evaluating model performance."""
-
-import json
+"""Module for evaluating the defect detection model."""
 import logging
 from pathlib import Path
-from typing import Dict
-
-import numpy as np
 import torch
-from sklearn.metrics import (
-    accuracy_score,
-    f1_score,
-    precision_score,
-    recall_score,
-)
+from torch.utils.data import DataLoader
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 
-from src.defect_detection.models import DefectDetectionModel
-from src.defect_detection.preprocessing import preprocess_image
+from .models import DefectDetectionModel
+from .data import DefectDataset
+
+logger = logging.getLogger(__name__)
 
 
 def load_model(model_path: str) -> DefectDetectionModel:
-    """Load the trained model from disk."""
+    """Load the trained model from disk.
+
+    Args:
+        model_path (str): Path to the saved model file.
+
+    Returns:
+        DefectDetectionModel: Loaded model.
+    """
     try:
-        model = torch.load(model_path)
+        model = DefectDetectionModel()
+        model.load_state_dict(torch.load(model_path))
         model.eval()
         return model
     except Exception as e:
-        logging.error(f"Error loading model: {str(e)}")
+        logger.error(f"Failed to load model: {str(e)}")
         raise
 
 
-def evaluate_model(
-    model: DefectDetectionModel,
-    test_dir: str,
-    batch_size: int = 32
-) -> Dict[str, float]:
-    """Evaluate model performance on test set."""
+def evaluate_model(test_data_dir: str = 'data/test', model_path: str = 'models/model.pth') -> dict:
+    """Evaluate model performance on test dataset.
+
+    Args:
+        test_data_dir (str): Directory containing test data.
+        model_path (str): Path to the saved model file.
+
+    Returns:
+        dict: Dictionary containing evaluation metrics.
+    """
     try:
-        test_dir = Path(test_dir)
-        image_paths = list(test_dir.glob("*.jpg")) + list(test_dir.glob("*.png"))
-        
-        y_true = []
-        y_pred = []
-        
-        for i in range(0, len(image_paths), batch_size):
-            batch_paths = image_paths[i:i + batch_size]
-            batch_images = []
-            batch_labels = []
-            
-            for path in batch_paths:
-                try:
-                    image = preprocess_image(str(path))
-                    label = int(path.parent.name)  # Assuming directory name is label
-                    batch_images.append(image)
-                    batch_labels.append(label)
-                except Exception as e:
-                    logging.error(f"Error processing {path}: {str(e)}")
-                    continue
-            
-            if not batch_images:
-                continue
-                
-            batch_tensor = torch.stack(batch_images)
-            with torch.no_grad():
-                outputs = model(batch_tensor)
-                predictions = torch.argmax(outputs, dim=1)
-            
-            y_true.extend(batch_labels)
-            y_pred.extend(predictions.tolist())
-        
-        metrics = {
-            "accuracy": accuracy_score(y_true, y_pred),
-            "precision": precision_score(y_true, y_pred, average="weighted"),
-            "recall": recall_score(y_true, y_pred, average="weighted"),
-            "f1": f1_score(y_true, y_pred, average="weighted"),
-        }
-        
-        return metrics
-        
-    except Exception as e:
-        logging.error(f"Error evaluating model: {str(e)}")
-        raise
-
-
-def save_metrics(metrics: Dict[str, float], output_path: str) -> None:
-    """Save evaluation metrics to a file."""
-    try:
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        with open(output_path, "w") as f:
-            json.dump(metrics, f, indent=2)
-            
-        logging.info(f"Saved metrics to {output_path}")
-        
-    except Exception as e:
-        logging.error(f"Error saving metrics: {str(e)}")
-        raise
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    model_path = "models/latest/model.pth"
-    test_dir = "data/test"
-    output_path = "metrics/evaluation_results.json"
-    
-    try:
+        # Load model
         model = load_model(model_path)
-        metrics = evaluate_model(model, test_dir)
-        save_metrics(metrics, output_path)
+
+        # Prepare test data
+        test_dataset = DefectDataset(Path(test_data_dir))
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=32,
+            shuffle=False,
+            num_workers=4
+        )
+
+        # Evaluate
+        true_labels = []
+        pred_labels = []
+        pred_probs = []
+
+        with torch.no_grad():
+            for images, labels in test_loader:
+                outputs = model(images)
+                probs = torch.sigmoid(outputs)
+                preds = (probs >= 0.5).float()
+
+                true_labels.extend(labels.numpy())
+                pred_labels.extend(preds.numpy())
+                pred_probs.extend(probs.numpy())
+
+        # Calculate metrics
+        precision, recall, f1, _ = precision_recall_fscore_support(
+            true_labels,
+            pred_labels,
+            average='binary'
+        )
+        accuracy = accuracy_score(true_labels, pred_labels)
+
+        metrics = {
+            'accuracy': float(accuracy),
+            'precision': float(precision),
+            'recall': float(recall),
+            'f1_score': float(f1)
+        }
+
+        logger.info(f"Evaluation metrics: {metrics}")
+        return metrics
+
     except Exception as e:
-        logging.error(f"Evaluation pipeline failed: {str(e)}")
+        logger.error(f"Evaluation failed: {str(e)}")
+        raise
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+    evaluate_model()

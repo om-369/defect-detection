@@ -1,9 +1,8 @@
 """Script to visualize training history."""
 
 import argparse
-from pathlib import Path
-import matplotlib.pyplot as plt
 import json
+import matplotlib.pyplot as plt
 
 def plot_training_history(history_file: str, output_file: str) -> None:
     """Plot training history from JSON file.
@@ -13,7 +12,6 @@ def plot_training_history(history_file: str, output_file: str) -> None:
         output_file: Path to save plot
     """
     # Load history data
-    history = {}
     with open(history_file) as f:
         history = json.load(f)
 
@@ -33,10 +31,7 @@ def plot_training_history(history_file: str, output_file: str) -> None:
     # Plot training and validation accuracy
     plt.subplot(1, 2, 2)
     plt.plot(history["accuracy"], label="Training Accuracy")
-    plt.plot(
-        history["val_accuracy"],
-        label="Validation Accuracy",
-    )
+    plt.plot(history["val_accuracy"], label="Validation Accuracy")
     plt.title("Model Accuracy")
     plt.xlabel("Epoch")
     plt.ylabel("Accuracy")
@@ -51,19 +46,9 @@ def plot_training_history(history_file: str, output_file: str) -> None:
 
 def main():
     """Visualize training history."""
-    parser = argparse.ArgumentParser(
-        description="Visualize model training history"
-    )
-    parser.add_argument(
-        "--history",
-        required=True,
-        help="Path to training history JSON file",
-    )
-    parser.add_argument(
-        "--output",
-        default="training_history.png",
-        help="Path to save plot",
-    )
+    parser = argparse.ArgumentParser(description="Visualize model training history")
+    parser.add_argument("--history", required=True, help="Path to training history JSON file")
+    parser.add_argument("--output", default="training_history.png", help="Path to save plot")
     args = parser.parse_args()
 
     plot_training_history(args.history, args.output)

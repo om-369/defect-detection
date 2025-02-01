@@ -29,7 +29,7 @@ def evaluate_model(
         Dictionary containing evaluation metrics
     """
     print("Loading model...")
-    model = tf.keras.models.load_model(model_path)
+    model = MODEL_CONFIG.load_model(model_path)
 
     print("Loading test data...")
     test_dir = Path(test_data_dir)

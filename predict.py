@@ -77,7 +77,11 @@ def main():
     """Run predictions on images."""
     parser = argparse.ArgumentParser(description="Run defect detection predictions")
     parser.add_argument("--model", required=True, help="Path to model weights")
-    parser.add_argument("--input", required=True, help="Path to input directory or image")
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="Path to input directory or image",
+    )
     parser.add_argument("--output", help="Path to save results JSON")
     args = parser.parse_args()
 
@@ -100,7 +104,7 @@ def main():
     else:
         # Directory of images
         results = process_directory(model, str(input_path))
-        
+
         # Print summary
         print("\nPrediction Summary:")
         defect_count = sum(1 for r in results if r.class_id == 1)

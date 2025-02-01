@@ -6,7 +6,7 @@ setup(
     name="defect_detection",
     version="0.1.0",
     packages=find_namespace_packages(include=["src.*"]),
-    package_dir={"": "."},
+    package_dir={"": "src"},
     include_package_data=True,
     install_requires=[
         line.strip()

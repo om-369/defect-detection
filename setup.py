@@ -5,7 +5,7 @@ from setuptools import setup, find_namespace_packages
 setup(
     name="defect_detection",
     version="0.1.0",
-    packages=find_namespace_packages(include=["src.*"]),
+    packages=find_namespace_packages(where="src"),
     package_dir={"": "src"},
     include_package_data=True,
     install_requires=[

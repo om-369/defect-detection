@@ -20,17 +20,21 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 black isort
+          pip install black==23.12.1 isort==5.13.2 flake8==7.0.0
           pip install -e .[dev]
 
-      - name: Run black
-        run: black --check src/ tests/
+      - name: Format with black
+        run: |
+          black src/ tests/
+          git diff --exit-code
 
-      - name: Run isort
-        run: isort --check-only src/ tests/
+      - name: Sort imports with isort
+        run: |
+          isort src/ tests/
+          git diff --exit-code
 
       - name: Run flake8
-        run: flake8 src/ tests/
+        run: flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203
 
   security-scans:
     needs: quality-checks
@@ -46,7 +50,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install bandit safety
+          pip install bandit==1.7.7 safety==2.3.5
           pip install -e .[dev]
 
       - name: Run Bandit security scan
@@ -77,7 +81,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build wheel
+          pip install build==1.0.3 wheel==0.42.0
           pip install -e .[dev]
 
       - name: Run tests
@@ -105,7 +109,7 @@ jobs:
           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          pip install twine
+          pip install twine==4.0.2
           twine upload dist/*
 
       - name: Set up Cloud SDK

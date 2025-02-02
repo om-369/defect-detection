@@ -73,7 +73,9 @@ def load_image(image_path: Union[str, Path]) -> torch.Tensor:
     return tensor.unsqueeze(0)
 
 
-def predict_image(image_path: Union[str, Path], model_path: str = "models/model.pth") -> PredictionDict:
+def predict_image(
+    image_path: Union[str, Path], model_path: str = "models/model.pth"
+) -> PredictionDict:
     """Make prediction for a single image.
 
     Args:
@@ -104,7 +106,9 @@ def predict_image(image_path: Union[str, Path], model_path: str = "models/model.
     }
 
 
-def process_directory(model: DefectDetectionModel, directory: Union[str, Path]) -> List[PredictionResult]:
+def process_directory(
+    model: DefectDetectionModel, directory: Union[str, Path]
+) -> List[PredictionResult]:
     """Process all images in a directory.
 
     Args:
@@ -135,7 +139,9 @@ def process_directory(model: DefectDetectionModel, directory: Union[str, Path]) 
     return results
 
 
-def save_results(results: List[PredictionResult], output_path: Union[str, Path]) -> None:
+def save_results(
+    results: List[PredictionResult], output_path: Union[str, Path]
+) -> None:
     """Save prediction results to JSON file.
 
     Args:
@@ -161,7 +167,9 @@ def main() -> None:
     """Run predictions on images."""
     parser = argparse.ArgumentParser(description="Run predictions on images")
     parser.add_argument("--model", type=str, required=True, help="Path to model file")
-    parser.add_argument("--input", type=str, required=True, help="Path to input image or directory")
+    parser.add_argument(
+        "--input", type=str, required=True, help="Path to input image or directory"
+    )
     parser.add_argument("--output", type=str, help="Path to save results")
     args = parser.parse_args()
 

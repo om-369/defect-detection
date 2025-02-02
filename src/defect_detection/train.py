@@ -186,6 +186,7 @@ def main() -> None:
     history_path = save_dir / f"history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(history_path, "w") as f:
         import json
+
         json.dump(history, f, indent=4)
     logger.info(f"Training history saved to {history_path}")
 

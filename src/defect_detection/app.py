@@ -1,13 +1,18 @@
 """Flask application for defect detection."""
 
+# Standard library imports
 import logging
 import os
 import time
+from datetime import datetime
+from pathlib import Path
 
+# Third-party imports
 from flask import Flask, jsonify, request
 from flask_login import LoginManager, login_required
 from prometheus_client import Counter, Histogram, start_http_server
 
+# Local application imports
 from .evaluate import evaluate_model
 from .predict import predict_image
 from .train import train_model

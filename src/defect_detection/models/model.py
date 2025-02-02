@@ -1,14 +1,13 @@
 """Model definition for defect detection."""
 
-import torch
 from pathlib import Path
 from typing import Dict, Union
 
 import numpy as np
+import torch
 from PIL import Image
 from torch import nn
 from torchvision import transforms
-
 
 # Define standard transformations
 transform = transforms.Compose(

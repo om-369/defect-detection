@@ -1,7 +1,7 @@
 """Preprocessing utilities for defect detection."""
 
 from pathlib import Path
-from typing import List, Tuple, cast
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -28,7 +28,7 @@ def preprocess(image: np.ndarray) -> torch.Tensor:
         Preprocessed image tensor
     """
     # Convert numpy array to PIL Image
-    pil_image = Image.fromarray(image.astype('uint8'))
+    pil_image = Image.fromarray(image.astype("uint8"))
 
     # Apply transformations
     return transform(pil_image)

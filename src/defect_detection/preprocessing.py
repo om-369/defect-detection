@@ -1,7 +1,7 @@
 """Preprocessing utilities for defect detection."""
 
 from pathlib import Path
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple, Optional, Union, Any, Callable
 
 import numpy as np
 import torch
@@ -9,7 +9,7 @@ from PIL import Image
 from torchvision import transforms
 
 # Define standard image transformations
-transform = transforms.Compose(
+transform: Callable[[Image.Image], torch.Tensor] = transforms.Compose(
     [
         transforms.Resize((224, 224)),
         transforms.ToTensor(),

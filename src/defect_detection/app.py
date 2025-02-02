@@ -30,11 +30,11 @@ class Config:
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value.
-        
+
         Args:
             key: Configuration key to look up
             default: Default value if key not found
-            
+
         Returns:
             Configuration value if found, default otherwise
         """

@@ -44,7 +44,9 @@ class DefectDetectionModel(nn.Module):
         return self.classifier(x)
 
     @staticmethod
-    def load_from_checkpoint(checkpoint_path: Union[str, Path]) -> "DefectDetectionModel":
+    def load_from_checkpoint(
+        checkpoint_path: Union[str, Path],
+    ) -> "DefectDetectionModel":
         """Load model from saved checkpoint.
 
         Args:

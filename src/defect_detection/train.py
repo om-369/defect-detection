@@ -127,11 +127,17 @@ def train_model(
 def main() -> None:
     """Run model training."""
     parser = argparse.ArgumentParser(description="Train defect detection model")
-    parser.add_argument("--data-dir", type=str, required=True, help="Path to data directory")
+    parser.add_argument(
+        "--data-dir", type=str, required=True, help="Path to data directory"
+    )
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
     parser.add_argument("--num-epochs", type=int, default=10, help="Number of epochs")
-    parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate")
-    parser.add_argument("--save-dir", type=str, default="models", help="Directory to save models")
+    parser.add_argument(
+        "--learning-rate", type=float, default=0.001, help="Learning rate"
+    )
+    parser.add_argument(
+        "--save-dir", type=str, default="models", help="Directory to save models"
+    )
     parser.add_argument("--device", type=str, default="cuda", help="Device to train on")
     args = parser.parse_args()
 

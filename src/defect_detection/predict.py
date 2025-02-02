@@ -51,12 +51,13 @@ class PredictionResult:
         Returns:
             PredictionDict representation
         """
-        return cast(PredictionDict, {
+        d: Dict[str, Union[str, int, float, None]] = {
             "filename": self.filename,
             "class_id": self.class_id,
             "confidence": self.confidence,
             "error": None,
-        })
+        }
+        return cast(PredictionDict, d)
 
 
 def load_image(image_path: Union[str, Path]) -> Optional[Image.Image]:
@@ -96,6 +97,51 @@ def preprocess_image(image: Image.Image) -> Tensor:
     return tensor
 
 
+def create_error_prediction(
+    filename: str, error_message: str, class_id: int = -1, confidence: float = 0.0
+) -> PredictionDict:
+    """Create a PredictionDict for error cases.
+
+    Args:
+        filename: Name of the image file
+        error_message: Error message to include
+        class_id: Class ID to use (default: -1)
+        confidence: Confidence score to use (default: 0.0)
+
+    Returns:
+        PredictionDict with error information
+    """
+    d: Dict[str, Union[str, int, float, None]] = {
+        "filename": filename,
+        "class_id": class_id,
+        "confidence": confidence,
+        "error": error_message,
+    }
+    return cast(PredictionDict, d)
+
+
+def create_success_prediction(
+    filename: str, class_id: int, confidence: float
+) -> PredictionDict:
+    """Create a PredictionDict for successful predictions.
+
+    Args:
+        filename: Name of the image file
+        class_id: Predicted class ID
+        confidence: Confidence score
+
+    Returns:
+        PredictionDict with prediction results
+    """
+    d: Dict[str, Union[str, int, float, None]] = {
+        "filename": filename,
+        "class_id": class_id,
+        "confidence": confidence,
+        "error": None,
+    }
+    return cast(PredictionDict, d)
+
+
 def predict_single_image(
     image_path: Union[str, Path], model_path: str = "checkpoints/model.pth"
 ) -> PredictionDict:
@@ -111,13 +157,9 @@ def predict_single_image(
     image_path = Path(image_path)
     image = load_image(image_path)
     if image is None:
-        result = cast(PredictionDict, {
-            "error": f"Failed to load image: {image_path}",
-            "filename": image_path.name,
-            "class_id": -1,
-            "confidence": 0.0,
-        })
-        return result
+        return create_error_prediction(
+            image_path.name, f"Failed to load image: {image_path}"
+        )
 
     # Load model
     try:
@@ -125,13 +167,7 @@ def predict_single_image(
         model.eval()
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
-        result = cast(PredictionDict, {
-            "error": "Failed to load model",
-            "filename": image_path.name,
-            "class_id": -1,
-            "confidence": 0.0,
-        })
-        return result
+        return create_error_prediction(image_path.name, "Failed to load model")
 
     # Preprocess and predict
     try:
@@ -141,23 +177,15 @@ def predict_single_image(
             probabilities = torch.softmax(outputs, dim=1)
             confidence, predicted = torch.max(probabilities, dim=1)
 
-            result = cast(PredictionDict, {
-                "filename": image_path.name,
-                "class_id": int(predicted.item()),
-                "confidence": float(confidence.item()),
-                "error": None,
-            })
-            return result
+            return create_success_prediction(
+                image_path.name,
+                int(predicted.item()),
+                float(confidence.item()),
+            )
 
     except Exception as e:
         logger.error(f"Failed to make prediction: {e}")
-        result = cast(PredictionDict, {
-            "error": "Failed to make prediction",
-            "filename": image_path.name,
-            "class_id": -1,
-            "confidence": 0.0,
-        })
-        return result
+        return create_error_prediction(image_path.name, "Failed to make prediction")
 
 
 def process_directory(
@@ -201,7 +229,9 @@ def process_directory(
     return results
 
 
-def save_results(results: List[PredictionResult], output_path: Union[str, Path]) -> None:
+def save_results(
+    results: List[PredictionResult], output_path: Union[str, Path]
+) -> None:
     """Save prediction results to a file.
 
     Args:

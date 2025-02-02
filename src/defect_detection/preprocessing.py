@@ -1,8 +1,10 @@
 """Preprocessing utilities for defect detection."""
 
+# Standard library imports
 from pathlib import Path
-from typing import List, Tuple, Optional, Union, Any, Callable
+from typing import Any, Callable, List, Optional, Tuple, Union
 
+# Third-party imports
 import numpy as np
 import torch
 from PIL import Image

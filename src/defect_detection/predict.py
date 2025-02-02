@@ -1,17 +1,21 @@
 """Module for making predictions using the trained model."""
 
+# Standard library imports
 import argparse
 import json
 import logging
 from pathlib import Path
-from typing import Dict, List, Union, Any, cast, TypedDict
+from typing import Any, Dict, List, TypedDict, Union, cast
 
+# Third-party imports
 import torch
 import torch.nn.functional as F
 from PIL import Image
+from torch import Tensor
 from torchvision import transforms
 from tqdm import tqdm
 
+# Local imports
 from .models import DefectDetectionModel
 
 logger = logging.getLogger(__name__)
@@ -59,7 +63,7 @@ class PredictionResult:
         self.probabilities = prediction["all_probabilities"]
 
 
-def load_image(image_path: Union[str, Path]) -> torch.Tensor:
+def load_image(image_path: Union[str, Path]) -> Tensor:
     """Load and preprocess an image.
 
     Args:
@@ -69,13 +73,11 @@ def load_image(image_path: Union[str, Path]) -> torch.Tensor:
         Preprocessed image tensor
     """
     image = Image.open(image_path).convert("RGB")
-    tensor = cast(torch.Tensor, transform(image))
+    tensor = cast(Tensor, transform(image))
     return tensor.unsqueeze(0)
 
 
-def predict_image(
-    image_path: Union[str, Path], model_path: str = "models/model.pth"
-) -> PredictionDict:
+def predict_image(image_path: Union[str, Path], model_path: str = "models/model.pth") -> PredictionDict:
     """Make prediction for a single image.
 
     Args:
@@ -106,9 +108,7 @@ def predict_image(
     }
 
 
-def process_directory(
-    model: DefectDetectionModel, directory: Union[str, Path]
-) -> List[PredictionResult]:
+def process_directory(model: DefectDetectionModel, directory: Union[str, Path]) -> List[PredictionResult]:
     """Process all images in a directory.
 
     Args:
@@ -139,9 +139,7 @@ def process_directory(
     return results
 
 
-def save_results(
-    results: List[PredictionResult], output_path: Union[str, Path]
-) -> None:
+def save_results(results: List[PredictionResult], output_path: Union[str, Path]) -> None:
     """Save prediction results to JSON file.
 
     Args:
@@ -167,9 +165,7 @@ def main() -> None:
     """Run predictions on images."""
     parser = argparse.ArgumentParser(description="Run predictions on images")
     parser.add_argument("--model", type=str, required=True, help="Path to model file")
-    parser.add_argument(
-        "--input", type=str, required=True, help="Path to input image or directory"
-    )
+    parser.add_argument("--input", type=str, required=True, help="Path to input image or directory")
     parser.add_argument("--output", type=str, help="Path to save results")
     args = parser.parse_args()
 

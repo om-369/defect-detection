@@ -29,7 +29,7 @@ googleapis-common-protos==1.66.0
 gunicorn>=21.0.0
 idna==3.10
 iniconfig==2.0.0
-isort==6.0.0
+isort>=5.12.0
 itsdangerous==2.2.0
 Jinja2==3.1.5
 markdown-it-py==3.0.0
@@ -38,7 +38,7 @@ marshmallow==3.26.0
 mccabe==0.7.0
 mdurl==0.1.2
 mpmath==1.3.0
-mypy==1.14.1
+mypy>=1.0.0
 mypy-extensions==1.0.0
 networkx==3.4.2
 numpy>=1.24.0
@@ -49,7 +49,7 @@ pathspec==0.12.1
 pillow>=10.0.0
 platformdirs==4.3.6
 pluggy==1.5.0
-prometheus_client>=0.17.0
+prometheus-client>=0.17.0
 proto-plus==1.26.0
 protobuf==5.29.3
 psutil==6.1.1
@@ -63,7 +63,7 @@ pyflakes==3.2.0
 Pygments==2.19.1
 pylint==3.3.4
 pytest>=7.0.0
-pytest-cov==6.0.0
+pytest-cov>=4.0.0
 python-json-logger==3.2.1
 PyYAML>=6.0.0
 requests>=2.31.0
@@ -80,12 +80,11 @@ shellingham==1.5.4
 sympy==1.13.1
 tomlkit==0.13.2
 torch>=2.0.0
-torchvision==0.21.0
+torchvision>=0.15.0
 typer==0.15.1
-types-PyYAML==6.0.12.20241230
-types-setuptools==75.8.0.20250110
+types-PyYAML>=6.0.0
+types-setuptools>=67.0.0
 typing_extensions==4.12.2
 urllib3==2.3.0
 Werkzeug>=2.0.0
 matplotlib>=3.7.0
-mypy>=1.12.1

@@ -2,6 +2,7 @@
 
 import logging
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
@@ -13,7 +14,7 @@ from .models import DefectDetectionModel
 logger = logging.getLogger(__name__)
 
 
-def load_model(model_path):
+def load_model(model_path: str) -> DefectDetectionModel:
     """Load the trained model from disk.
 
     Args:
@@ -32,7 +33,7 @@ def load_model(model_path):
         raise
 
 
-def evaluate_model(test_data_dir="data/test", model_path="models/model.pth"):
+def evaluate_model(test_data_dir: str = "data/test", model_path: str = "models/model.pth") -> Dict[str, float]:
     """Evaluate model performance on test dataset.
 
     Args:
@@ -53,9 +54,9 @@ def evaluate_model(test_data_dir="data/test", model_path="models/model.pth"):
         )
 
         # Evaluate
-        true_labels = []
-        pred_labels = []
-        pred_probs = []
+        true_labels: List[int] = []
+        pred_labels: List[int] = []
+        pred_probs: List[float] = []
 
         with torch.no_grad():
             for images, labels in test_loader:

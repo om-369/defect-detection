@@ -3,81 +3,71 @@
 # Standard library imports
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Dict, Union
 
 # Third-party imports
-import yaml
 from flask import Flask, jsonify, request
 from werkzeug.utils import secure_filename
 
 # Local imports
-from .predict import predict_image
-
-
-class Config:
-    """Configuration management singleton class."""
-
-    _instance = None
-    config: Dict[str, Any] = {}
-
-    def __new__(cls) -> "Config":
-        """Create singleton instance."""
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def load_config(self, config_path: Optional[str] = None) -> None:
-        """Load configuration from YAML file.
-
-        Args:
-            config_path: Path to config file
-        """
-        if config_path and Path(config_path).exists():
-            with open(config_path) as f:
-                self.config = yaml.safe_load(f)
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Get configuration value.
-
-        Args:
-            key: Configuration key
-            default: Default value if key not found
-
-        Returns:
-            Configuration value
-        """
-        return self.config.get(key, default)
-
+from .config import Config
+from .predict import predict_single_image
 
 config = Config()
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "default-secret-key")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "default-secret-key")
+app.config["UPLOAD_FOLDER"] = "uploads"
+
+# Ensure upload directory exists
+Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
+
+
+@app.route("/", methods=["GET"])
+def index() -> str:
+    """Serve the index page.
+
+    Returns:
+        HTML content of the index page
+    """
+    return """
+    <html>
+        <head>
+            <title>Defect Detection</title>
+        </head>
+        <body>
+            <h1>Defect Detection Service</h1>
+            <form action="/predict" method="post" enctype="multipart/form-data">
+                <input type="file" name="file" accept="image/*">
+                <input type="submit" value="Upload and Predict">
+            </form>
+        </body>
+    </html>
+    """
 
 
 @app.route("/predict", methods=["POST"])
-def predict() -> Dict[str, Any]:
-    """Handle prediction request.
+def predict() -> Union[Dict[str, str], str]:
+    """Handle prediction requests.
 
     Returns:
-        Prediction results
+        Prediction results or error message
     """
     if "file" not in request.files:
-        return jsonify({"error": "No file provided"}), 400
+        return jsonify({"error": "No file uploaded"})
 
     file = request.files["file"]
-    if not file.filename:
-        return jsonify({"error": "No file selected"}), 400
+    if not file or not file.filename:
+        return jsonify({"error": "No file selected"})
 
     filename = secure_filename(file.filename)
-    temp_path = Path("temp") / filename
-    temp_path.parent.mkdir(exist_ok=True)
-    file.save(temp_path)
+    filepath = Path(app.config["UPLOAD_FOLDER"]) / filename
+    file.save(filepath)
 
     try:
-        result = predict_image(temp_path)
+        result = predict_single_image(filepath)
         return jsonify(result)
-    finally:
-        temp_path.unlink(missing_ok=True)
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 
 if __name__ == "__main__":

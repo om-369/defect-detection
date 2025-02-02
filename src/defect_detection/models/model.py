@@ -33,7 +33,8 @@ class DefectDetectionModel(nn.Module):
         Returns:
             Output tensor
         """
-        return self.model(x)
+        output: torch.Tensor = self.model(x)
+        return output
 
     @classmethod
     def load_from_checkpoint(

@@ -1,24 +1,12 @@
 """Flask application for defect detection service."""
 
-import json
-import logging
 import os
-import time
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import torch
 import yaml
-from flask import Flask, jsonify, redirect, render_template, request, url_for
-from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user
-from google.cloud import storage
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest, start_http_server
-from werkzeug.security import check_password_hash, generate_password_hash
-from werkzeug.utils import secure_filename
-
-from defect_detection.models.model import DefectDetectionModel
-from defect_detection.preprocessing import preprocess
+from flask import Flask
+from flask_login import LoginManager
 
 
 class Config:

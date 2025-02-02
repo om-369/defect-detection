@@ -36,7 +36,7 @@ setup(
             "black>=23.0.0",
             "flake8>=6.0.0",
             "bandit>=1.7.0",
-            "safety>=2.3.0",
+            "safety>=3.0.0",
         ],
     },
     entry_points={

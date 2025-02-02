@@ -1,7 +1,7 @@
 """Model definition for defect detection."""
 
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Tuple, Union
 
 import torch
 from PIL import Image
@@ -21,7 +21,7 @@ transform = transforms.Compose(
 class DefectDetectionModel(nn.Module):
     """PyTorch model for defect detection."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.conv_layers = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=3, padding=1),
@@ -44,7 +44,7 @@ class DefectDetectionModel(nn.Module):
         return self.classifier(x)
 
     @staticmethod
-    def load_from_checkpoint(checkpoint_path: str) -> "DefectDetectionModel":
+    def load_from_checkpoint(checkpoint_path: Union[str, Path]) -> "DefectDetectionModel":
         """Load model from saved checkpoint.
 
         Args:

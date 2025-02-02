@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -124,82 +124,63 @@ def train_model(
     return history
 
 
-def main():
+def main() -> None:
     """Run model training."""
     parser = argparse.ArgumentParser(description="Train defect detection model")
-    parser.add_argument(
-        "--data-dir",
-        required=True,
-        help="Directory containing training data",
-    )
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=32,
-        help="Batch size for training",
-    )
-    parser.add_argument(
-        "--epochs",
-        type=int,
-        default=50,
-        help="Number of epochs to train",
-    )
-    parser.add_argument(
-        "--learning-rate",
-        type=float,
-        default=0.001,
-        help="Learning rate for optimizer",
-    )
+    parser.add_argument("--data-dir", type=str, required=True, help="Path to data directory")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
+    parser.add_argument("--num-epochs", type=int, default=10, help="Number of epochs")
+    parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate")
+    parser.add_argument("--save-dir", type=str, default="models", help="Directory to save models")
+    parser.add_argument("--device", type=str, default="cuda", help="Device to train on")
     args = parser.parse_args()
 
+    # Create save directory
+    save_dir = Path(args.save_dir)
+    save_dir.mkdir(parents=True, exist_ok=True)
+
     # Setup device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
 
-    # Create data loaders
-    train_dataset = DefectDataset(
-        Path(args.data_dir) / "train",
-        transform=True,
-    )
-    val_dataset = DefectDataset(
-        Path(args.data_dir) / "val",
-        transform=True,
-    )
+    # Load data
+    train_dataset = DefectDataset(args.data_dir, train=True)
+    val_dataset = DefectDataset(args.data_dir, train=False)
 
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
+        num_workers=4,
     )
     val_loader = DataLoader(
         val_dataset,
         batch_size=args.batch_size,
         shuffle=False,
+        num_workers=4,
     )
 
-    # Initialize model and training components
+    # Create model
     model = DefectDetectionModel().to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
 
     # Train model
-    save_dir = Path("models")
     history = train_model(
-        model,
-        train_loader,
-        val_loader,
-        criterion,
-        optimizer,
-        args.epochs,
-        device,
-        save_dir,
+        model=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        criterion=criterion,
+        optimizer=optimizer,
+        num_epochs=args.num_epochs,
+        device=device,
+        save_dir=save_dir,
     )
 
     # Save training history
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    history_path = save_dir / f"history_{timestamp}.json"
+    history_path = save_dir / f"history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(history_path, "w") as f:
-        json.dump(history, f)
+        json.dump(history, f, indent=4)
     logger.info(f"Training history saved to {history_path}")
 
 

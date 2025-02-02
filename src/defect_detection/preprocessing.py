@@ -1,7 +1,7 @@
 """Preprocessing utilities for defect detection."""
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Union
 
 import numpy as np
 import torch
@@ -34,7 +34,7 @@ def preprocess(image: np.ndarray) -> torch.Tensor:
     return transform(pil_image)
 
 
-def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
+def load_dataset(data_dir: Union[str, Path]) -> Tuple[List[np.ndarray], List[int]]:
     """Load dataset from directory.
 
     Args:

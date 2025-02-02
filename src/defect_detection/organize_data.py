@@ -2,6 +2,7 @@
 
 import shutil
 from pathlib import Path
+from typing import Optional
 
 # Setup paths
 BASE_DIR = Path(__file__).resolve().parent
@@ -9,7 +10,7 @@ RAW_DIR = BASE_DIR / "data" / "raw"
 LABELED_DIR = BASE_DIR / "data" / "labeled"
 
 
-def get_base_name(filename):
+def get_base_name(filename: str) -> str:
     """Get base name without the random suffix."""
     # Split by rf. and take the first part
     parts = filename.split("rf.")
@@ -18,7 +19,7 @@ def get_base_name(filename):
     return filename
 
 
-def check_label_file_exists(directory, img_path):
+def check_label_file_exists(directory: Path, img_path: Path) -> bool:
     """Check if either .txt or .json label file exists."""
     # Try exact match first
     txt_path = directory / f"{img_path.stem}.txt"
@@ -36,7 +37,7 @@ def check_label_file_exists(directory, img_path):
     return False
 
 
-def organize_data():
+def organize_data() -> None:
     """Organize images into defect and no_defect directories."""
     print("Starting data organization...")
 

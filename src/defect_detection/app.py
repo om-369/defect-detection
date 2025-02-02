@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional, Union
 
 import yaml
 from flask import Flask
@@ -13,22 +13,31 @@ class Config:
     """Configuration management singleton class."""
 
     _instance: Optional["Config"] = None
+    config: Dict[str, Any]
 
-    def __new__(cls):
+    def __new__(cls) -> "Config":
         """Create singleton instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize configuration."""
         if not hasattr(self, "config"):
             config_path = Path("config/config.yaml")
             with open(config_path) as f:
                 self.config = yaml.safe_load(f)
 
-    def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        """Get configuration value."""
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get configuration value.
+        
+        Args:
+            key: Configuration key to look up
+            default: Default value if key not found
+            
+        Returns:
+            Configuration value if found, default otherwise
+        """
         return self.config.get(key, default)
 
 

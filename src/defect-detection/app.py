@@ -1,5 +1,6 @@
 """Flask application for defect detection service."""
 
+# Standard library imports
 import json
 import logging
 import os
@@ -8,8 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import torch
-import yaml
+# Third-party imports
 from flask import (
     Flask,
     jsonify,
@@ -31,6 +31,8 @@ from prometheus_client import (
     generate_latest,
     start_http_server,
 )
+import torch
+import yaml
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 

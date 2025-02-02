@@ -2,7 +2,7 @@
 
 # Standard library imports
 from pathlib import Path
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Tuple, Union
 
 # Third-party imports
 import numpy as np

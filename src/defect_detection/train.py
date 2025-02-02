@@ -1,11 +1,10 @@
 """Script for training the defect detection model."""
 
 import argparse
-import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List
 
 import torch
 import torch.nn as nn
@@ -186,6 +185,7 @@ def main() -> None:
     # Save training history
     history_path = save_dir / f"history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     with open(history_path, "w") as f:
+        import json
         json.dump(history, f, indent=4)
     logger.info(f"Training history saved to {history_path}")
 

@@ -6,7 +6,7 @@ import json
 import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, TypedDict, Union
+from typing import Dict, List, Optional, TypedDict, Union, cast
 
 # Third-party imports
 import torch
@@ -20,7 +20,7 @@ from .models import DefectDetectionModel
 logger = logging.getLogger(__name__)
 
 
-class PredictionDict(TypedDict):
+class PredictionDict(TypedDict, total=True):
     """Type definition for prediction results."""
 
     filename: str
@@ -44,6 +44,19 @@ class PredictionResult:
             Dictionary representation
         """
         return asdict(self)
+
+    def to_prediction_dict(self) -> PredictionDict:
+        """Convert to PredictionDict.
+
+        Returns:
+            PredictionDict representation
+        """
+        return cast(PredictionDict, {
+            "filename": self.filename,
+            "class_id": self.class_id,
+            "confidence": self.confidence,
+            "error": None,
+        })
 
 
 def load_image(image_path: Union[str, Path]) -> Optional[Image.Image]:
@@ -83,7 +96,9 @@ def preprocess_image(image: Image.Image) -> Tensor:
     return tensor
 
 
-def predict_single_image(image_path: Union[str, Path], model_path: str = "checkpoints/model.pth") -> PredictionDict:
+def predict_single_image(
+    image_path: Union[str, Path], model_path: str = "checkpoints/model.pth"
+) -> PredictionDict:
     """Make prediction on a single image.
 
     Args:
@@ -96,12 +111,12 @@ def predict_single_image(image_path: Union[str, Path], model_path: str = "checkp
     image_path = Path(image_path)
     image = load_image(image_path)
     if image is None:
-        result: PredictionDict = {
+        result = cast(PredictionDict, {
             "error": f"Failed to load image: {image_path}",
             "filename": image_path.name,
             "class_id": -1,
             "confidence": 0.0,
-        }
+        })
         return result
 
     # Load model
@@ -110,12 +125,12 @@ def predict_single_image(image_path: Union[str, Path], model_path: str = "checkp
         model.eval()
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
-        result = {
+        result = cast(PredictionDict, {
             "error": "Failed to load model",
             "filename": image_path.name,
             "class_id": -1,
             "confidence": 0.0,
-        }
+        })
         return result
 
     # Preprocess and predict
@@ -124,24 +139,24 @@ def predict_single_image(image_path: Union[str, Path], model_path: str = "checkp
             inputs = preprocess_image(image)
             outputs = model(inputs)
             probabilities = torch.softmax(outputs, dim=1)
-            confidence, predicted = probabilities.max(1)
+            confidence, predicted = torch.max(probabilities, dim=1)
 
-            result = {
+            result = cast(PredictionDict, {
                 "filename": image_path.name,
                 "class_id": int(predicted.item()),
                 "confidence": float(confidence.item()),
                 "error": None,
-            }
+            })
             return result
 
     except Exception as e:
         logger.error(f"Failed to make prediction: {e}")
-        result = {
+        result = cast(PredictionDict, {
             "error": "Failed to make prediction",
             "filename": image_path.name,
             "class_id": -1,
             "confidence": 0.0,
-        }
+        })
         return result
 
 
@@ -171,7 +186,7 @@ def process_directory(
                 inputs = preprocess_image(image)
                 outputs = model(inputs)
                 probabilities = torch.softmax(outputs, dim=1)
-                confidence, predicted = probabilities.max(1)
+                confidence, predicted = torch.max(probabilities, dim=1)
 
                 result = PredictionResult(
                     filename=image_path.name,
@@ -193,7 +208,7 @@ def save_results(results: List[PredictionResult], output_path: Union[str, Path])
         results: List of PredictionResult objects
         output_path: Path to save results
     """
-    output_data = [result.to_dict() for result in results]
+    output_data = [result.to_prediction_dict() for result in results]
     with open(output_path, "w") as f:
         json.dump(output_data, f, indent=4)
 
@@ -208,9 +223,7 @@ def main() -> None:
         default="checkpoints/model.pth",
         help="Path to model checkpoint",
     )
-    parser.add_argument(
-        "--output", type=str, help="Path to save results (optional)"
-    )
+    parser.add_argument("--output", type=str, help="Path to save results (optional)")
     args = parser.parse_args()
 
     # Process input
@@ -232,7 +245,7 @@ def main() -> None:
                 save_results(results, args.output)
             else:
                 for result in results:
-                    print(json.dumps(result.to_dict(), indent=4))
+                    print(json.dumps(result.to_prediction_dict(), indent=4))
         except Exception as e:
             logger.error(f"Failed to process directory: {e}")
 

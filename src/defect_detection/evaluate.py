@@ -1,13 +1,17 @@
 """Module for evaluating the defect detection model."""
 
+# Standard library imports
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List
 
+# Third-party imports
 import torch
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
+# Local imports
 from .data import DefectDataset
 from .models import DefectDetectionModel
 
@@ -33,7 +37,9 @@ def load_model(model_path: str) -> DefectDetectionModel:
         raise
 
 
-def evaluate_model(test_data_dir: str = "data/test", model_path: str = "models/model.pth") -> Dict[str, float]:
+def evaluate_model(
+    test_data_dir: str = "data/test", model_path: str = "models/model.pth"
+) -> Dict[str, float]:
     """Evaluate model performance on test dataset.
 
     Args:
@@ -59,7 +65,7 @@ def evaluate_model(test_data_dir: str = "data/test", model_path: str = "models/m
         pred_probs: List[float] = []
 
         with torch.no_grad():
-            for images, labels in test_loader:
+            for images, labels in tqdm(test_loader, desc="Evaluating"):
                 outputs = model(images)
                 probs = torch.sigmoid(outputs)
                 preds = (probs >= 0.5).float()
@@ -87,6 +93,24 @@ def evaluate_model(test_data_dir: str = "data/test", model_path: str = "models/m
     except Exception as e:
         logger.error(f"Evaluation failed: {str(e)}")
         raise
+
+
+def save_metrics(metrics: Dict[str, float], output_path: str | Path) -> None:
+    """Save evaluation metrics to file.
+
+    Args:
+        metrics: Dictionary containing evaluation metrics
+        output_path: Path to save metrics
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        with open(output_path, "w") as f:
+            for metric, value in metrics.items():
+                f.write(f"{metric}: {value:.4f}\n")
+    except Exception as e:
+        logger.error(f"Failed to save metrics: {e}")
 
 
 if __name__ == "__main__":

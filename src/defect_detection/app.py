@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Dict, Union
 
 # Third-party imports
-from flask import Flask, jsonify, request
+from flask import Flask, Response, jsonify, request
 from werkzeug.utils import secure_filename
 
 # Local imports
 from .config import Config
-from .predict import predict_single_image
+from .predict import PredictionDict, predict_single_image
 
 config = Config()
 app = Flask(__name__)
@@ -46,7 +46,7 @@ def index() -> str:
 
 
 @app.route("/predict", methods=["POST"])
-def predict() -> Union[Dict[str, str], str]:
+def predict() -> Response:
     """Handle prediction requests.
 
     Returns:

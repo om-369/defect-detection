@@ -1,7 +1,7 @@
 """Preprocessing utilities for defect detection."""
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 import numpy as np
 import torch
@@ -28,10 +28,10 @@ def preprocess(image: np.ndarray) -> torch.Tensor:
         Preprocessed image tensor
     """
     # Convert numpy array to PIL Image
-    image = Image.fromarray(image)
+    pil_image = Image.fromarray(image.astype('uint8'))
 
     # Apply transformations
-    return transform(image)
+    return transform(pil_image)
 
 
 def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
@@ -41,18 +41,20 @@ def load_dataset(data_dir: str) -> Tuple[List[np.ndarray], List[int]]:
         data_dir: Path to dataset directory
 
     Returns:
-        Tuple of (images, labels)
+        Tuple of (images, labels) where images is a list of numpy arrays
+        and labels is a list of integers (0 for good, 1 for defect)
     """
-    images = []
-    labels = []
+    images: List[np.ndarray] = []
+    labels: List[int] = []
 
     image_dir = Path(data_dir) / "images"
 
     for img_path in image_dir.glob("*.jpg"):
         # Load image
-        image = Image.open(img_path).convert("RGB")
-        image = np.array(image)
-        images.append(image)
+        with Image.open(img_path) as img:
+            img = img.convert("RGB")
+            image = np.array(img, dtype=np.uint8)
+            images.append(image)
 
         # Determine label from filename
         # Assuming filenames start with 'good_' or 'defect_'

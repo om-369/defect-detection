@@ -5,6 +5,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, cast
 
 import torch
 import torch.nn as nn
@@ -31,7 +32,7 @@ def train_model(
     num_epochs: int,
     device: torch.device,
     save_dir: Path,
-) -> dict:
+) -> Dict[str, List[float]]:
     """Train model and return training history.
 
     Args:
@@ -45,9 +46,9 @@ def train_model(
         save_dir: Directory to save model checkpoints
 
     Returns:
-        Dictionary containing training history
+        Dictionary containing training history with metrics
     """
-    history = {
+    history: Dict[str, List[float]] = {
         "loss": [],
         "accuracy": [],
         "val_loss": [],
@@ -60,66 +61,65 @@ def train_model(
     for epoch in range(num_epochs):
         # Training phase
         model.train()
-        train_loss = 0.0
+        running_loss = 0.0
         correct = 0
         total = 0
 
         for inputs, labels in train_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
 
-            train_loss += loss.item()
-            predicted = (outputs > 0.5).float()
+            running_loss += loss.item()
+            _, predicted = outputs.max(1)
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            correct += predicted.eq(labels).sum().item()
 
-        epoch_loss = train_loss / len(train_loader)
-        epoch_acc = correct / total
+        epoch_loss = running_loss / len(train_loader)
+        epoch_acc = 100.0 * correct / total
+        history["loss"].append(epoch_loss)
+        history["accuracy"].append(epoch_acc)
 
         # Validation phase
         model.eval()
         val_loss = 0.0
-        val_correct = 0
-        val_total = 0
+        correct = 0
+        total = 0
 
         with torch.no_grad():
             for inputs, labels in val_loader:
-                inputs, labels = inputs.to(device), labels.to(device)
+                inputs = inputs.to(device)
+                labels = labels.to(device)
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
 
                 val_loss += loss.item()
-                predicted = (outputs > 0.5).float()
-                val_total += labels.size(0)
-                val_correct += (predicted == labels).sum().item()
+                _, predicted = outputs.max(1)
+                total += labels.size(0)
+                correct += predicted.eq(labels).sum().item()
 
-        val_epoch_loss = val_loss / len(val_loader)
-        val_epoch_acc = val_correct / val_total
+        val_loss = val_loss / len(val_loader)
+        val_acc = 100.0 * correct / total
+        history["val_loss"].append(val_loss)
+        history["val_accuracy"].append(val_acc)
 
-        # Update history
-        history["loss"].append(epoch_loss)
-        history["accuracy"].append(epoch_acc)
-        history["val_loss"].append(val_epoch_loss)
-        history["val_accuracy"].append(val_epoch_acc)
+        # Save best model
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            torch.save(model.state_dict(), best_model_path)
 
         logger.info(
             f"Epoch {epoch+1}/{num_epochs} - "
-            f"Loss: {epoch_loss:.4f} - Acc: {epoch_acc:.4f} - "
-            f"Val Loss: {val_epoch_loss:.4f} - Val Acc: {val_epoch_acc:.4f}"
+            f"Loss: {epoch_loss:.4f} - "
+            f"Acc: {epoch_acc:.2f}% - "
+            f"Val Loss: {val_loss:.4f} - "
+            f"Val Acc: {val_acc:.2f}%"
         )
-
-        # Save best model
-        if val_epoch_loss < best_val_loss:
-            best_val_loss = val_epoch_loss
-            try:
-                model.save_checkpoint(str(best_model_path))
-                logger.info(f"Best model saved to {best_model_path}")
-            except RuntimeError as e:
-                logger.error(f"Failed to save best model: {e}")
 
     return history
 

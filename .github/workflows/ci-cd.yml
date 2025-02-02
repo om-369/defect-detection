@@ -25,7 +25,7 @@ jobs:
 
       - name: Format with black
         run: |
-          black src/ tests/
+          black --check src/ tests/
           git diff --exit-code
 
       - name: Sort imports with isort

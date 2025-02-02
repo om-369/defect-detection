@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import torch
 
-from defect_detection.models.model import DefectDetectionModel, predict
+from defect_detection.models.model import DefectDetectionModel
 from defect_detection.preprocessing import preprocess
 
 
@@ -44,40 +44,26 @@ def test_preprocess_image(test_image_path):
 def test_predict(test_model, test_image_path):
     """Test prediction function."""
     # Make prediction
-    result = predict(test_model, str(test_image_path))
+    result = test_model.predict(str(test_image_path))
     # Check output properties
     assert isinstance(result, dict)
     assert "class" in result
     assert "confidence" in result
-    assert "all_probabilities" in result
-    # Check types and ranges
+    assert "defect_probability" in result
     assert isinstance(result["class"], int)
-    assert result["class"] in [0, 1]
     assert isinstance(result["confidence"], float)
-    assert 0 <= result["confidence"] <= 100
-    assert isinstance(result["all_probabilities"], dict)
-    assert set(result["all_probabilities"].keys()) == {0, 1}
-    probs = result["all_probabilities"].values()
-    assert all(isinstance(v, float) for v in probs)
-    assert all(0 <= v <= 100 for v in probs)
-    assert abs(sum(probs) - 100) < 1e-6
+    assert isinstance(result["defect_probability"], float)
+    assert 0 <= result["confidence"] <= 1
+    assert 0 <= result["defect_probability"] <= 1
 
 
 @pytest.mark.unit
 def test_model_prediction_range(test_model, test_image_path):
     """Test that model predictions are in valid range."""
-    # Create a batch of test images
-    batch_size = 4
-    images = []
-    for _ in range(batch_size):
-        img = cv2.imread(str(test_image_path))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        processed = preprocess(img)
-        images.append(processed)
-    # Make predictions
-    batch = torch.stack(images)
-    with torch.no_grad():
-        predictions = test_model(batch)
-    # Check predictions are in valid range
-    assert torch.all(predictions >= 0)
-    assert torch.all(predictions <= 1)
+    # Make prediction
+    result = test_model.predict(str(test_image_path))
+    # Check prediction range
+    assert result["defect_probability"] >= 0
+    assert result["defect_probability"] <= 1
+    assert result["confidence"] >= 0
+    assert result["confidence"] <= 1

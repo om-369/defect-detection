@@ -30,6 +30,7 @@ def train_model(
     optimizer: optim.Optimizer,
     num_epochs: int,
     device: torch.device,
+    save_dir: Path,
 ) -> dict:
     """Train model and return training history.
 
@@ -41,6 +42,7 @@ def train_model(
         optimizer: Optimizer
         num_epochs: Number of epochs to train
         device: Device to train on
+        save_dir: Directory to save model checkpoints
 
     Returns:
         Dictionary containing training history
@@ -53,18 +55,17 @@ def train_model(
     }
 
     best_val_loss = float("inf")
-    best_model_path = "models/best_model.pth"
+    best_model_path = save_dir / "best_model.pth"
 
     for epoch in range(num_epochs):
         # Training phase
         model.train()
         train_loss = 0.0
-        train_correct = 0
-        train_total = 0
+        correct = 0
+        total = 0
 
         for inputs, labels in train_loader:
             inputs, labels = inputs.to(device), labels.to(device)
-
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs, labels)
@@ -72,13 +73,12 @@ def train_model(
             optimizer.step()
 
             train_loss += loss.item()
-            _, predicted = outputs.max(1)
-            train_total += labels.size(0)
-            train_correct += predicted.eq(labels).sum().item()
+            predicted = (outputs > 0.5).float()
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
 
-        # Calculate training metrics
         epoch_loss = train_loss / len(train_loader)
-        epoch_acc = 100.0 * train_correct / train_total
+        epoch_acc = correct / total
 
         # Validation phase
         model.eval()
@@ -93,13 +93,12 @@ def train_model(
                 loss = criterion(outputs, labels)
 
                 val_loss += loss.item()
-                _, predicted = outputs.max(1)
+                predicted = (outputs > 0.5).float()
                 val_total += labels.size(0)
-                val_correct += predicted.eq(labels).sum().item()
+                val_correct += (predicted == labels).sum().item()
 
-        # Calculate validation metrics
         val_epoch_loss = val_loss / len(val_loader)
-        val_epoch_acc = 100.0 * val_correct / val_total
+        val_epoch_acc = val_correct / val_total
 
         # Update history
         history["loss"].append(epoch_loss)
@@ -107,19 +106,20 @@ def train_model(
         history["val_loss"].append(val_epoch_loss)
         history["val_accuracy"].append(val_epoch_acc)
 
+        logger.info(
+            f"Epoch {epoch+1}/{num_epochs} - "
+            f"Loss: {epoch_loss:.4f} - Acc: {epoch_acc:.4f} - "
+            f"Val Loss: {val_epoch_loss:.4f} - Val Acc: {val_epoch_acc:.4f}"
+        )
+
         # Save best model
         if val_epoch_loss < best_val_loss:
             best_val_loss = val_epoch_loss
-            torch.save(model.state_dict(), best_model_path)
-
-        # Log progress
-        logger.info(
-            f"Epoch {epoch+1}/{num_epochs} - "
-            f"Loss: {epoch_loss:.4f} - "
-            f"Acc: {epoch_acc:.2f}% - "
-            f"Val Loss: {val_epoch_loss:.4f} - "
-            f"Val Acc: {val_epoch_acc:.2f}%"
-        )
+            try:
+                model.save_checkpoint(str(best_model_path))
+                logger.info(f"Best model saved to {best_model_path}")
+            except RuntimeError as e:
+                logger.error(f"Failed to save best model: {e}")
 
     return history
 
@@ -183,6 +183,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
 
     # Train model
+    save_dir = Path("models")
     history = train_model(
         model,
         train_loader,
@@ -191,11 +192,12 @@ def main():
         optimizer,
         args.epochs,
         device,
+        save_dir,
     )
 
     # Save training history
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    history_path = f"models/history_{timestamp}.json"
+    history_path = save_dir / f"history_{timestamp}.json"
     with open(history_path, "w") as f:
         json.dump(history, f)
     logger.info(f"Training history saved to {history_path}")

@@ -6,18 +6,19 @@ import json
 import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, TypedDict, Union, cast
+from typing import Dict, List, Optional, TypedDict, Union
 
 # Third-party imports
-import torch
+import numpy as np
 from PIL import Image
-from torch import Tensor
-from torchvision import transforms
+from tensorflow.keras.preprocessing.image import img_to_array
 
 # Local imports
 from .models import DefectDetectionModel
+from .config import Config
 
 logger = logging.getLogger(__name__)
+config = Config()
 
 
 class PredictionDict(TypedDict, total=True):
@@ -57,7 +58,7 @@ class PredictionResult:
             "confidence": self.confidence,
             "error": None,
         }
-        return cast(PredictionDict, d)
+        return d
 
 
 def load_image(image_path: Union[str, Path]) -> Optional[Image.Image]:
@@ -76,25 +77,24 @@ def load_image(image_path: Union[str, Path]) -> Optional[Image.Image]:
         return None
 
 
-def preprocess_image(image: Image.Image) -> Tensor:
+def preprocess_image(image: Image.Image) -> np.ndarray:
     """Preprocess image for model input.
 
     Args:
         image: PIL Image to preprocess
 
     Returns:
-        Preprocessed image tensor
+        Preprocessed image array
     """
-    transform = transforms.Compose(
-        [
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
-    tensor: Tensor = transform(image).unsqueeze(0)
-    return tensor
+    # Resize image to model's expected size
+    image = image.resize(config.image_size)
+    
+    # Convert to array and add batch dimension
+    img_array = img_to_array(image)
+    img_array = np.expand_dims(img_array, axis=0)
+    
+    # Keep as uint8 - model's Rescaling layer will handle normalization
+    return img_array.astype(np.uint8)
 
 
 def create_error_prediction(
@@ -117,7 +117,7 @@ def create_error_prediction(
         "confidence": confidence,
         "error": error_message,
     }
-    return cast(PredictionDict, d)
+    return d
 
 
 def create_success_prediction(
@@ -139,57 +139,57 @@ def create_success_prediction(
         "confidence": confidence,
         "error": None,
     }
-    return cast(PredictionDict, d)
+    return d
 
 
 def predict_single_image(
-    image_path: Union[str, Path], model_path: str = "checkpoints/model.pth"
+    image_path: Union[str, Path]
 ) -> PredictionDict:
     """Make prediction on a single image.
 
     Args:
         image_path: Path to image file
-        model_path: Path to model checkpoint
 
     Returns:
         Dictionary containing prediction results
     """
     image_path = Path(image_path)
-    image = load_image(image_path)
-    if image is None:
-        return create_error_prediction(
-            image_path.name, f"Failed to load image: {image_path}"
-        )
-
-    # Load model
     try:
-        model = DefectDetectionModel.load_from_checkpoint(model_path)
-        model.eval()
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-        return create_error_prediction(image_path.name, "Failed to load model")
-
-    # Preprocess and predict
-    try:
-        with torch.no_grad():
-            inputs = preprocess_image(image)
-            outputs = model(inputs)
-            probabilities = torch.softmax(outputs, dim=1)
-            confidence, predicted = torch.max(probabilities, dim=1)
-
-            return create_success_prediction(
-                image_path.name,
-                int(predicted.item()),
-                float(confidence.item()),
+        # Load and preprocess image
+        image = load_image(image_path)
+        if image is None:
+            return create_error_prediction(
+                image_path.name, f"Failed to load image: {image_path}"
             )
+
+        # Load model
+        try:
+            model = DefectDetectionModel.load_from_checkpoint(config.model_path)
+        except Exception as e:
+            logger.error(f"Failed to load model: {e}")
+            return create_error_prediction(image_path.name, f"Failed to load model: {str(e)}")
+
+        # Preprocess and predict
+        inputs = preprocess_image(image)
+        outputs = model(inputs)
+        
+        # Get prediction and confidence
+        class_id = int(np.argmax(outputs[0]))
+        confidence = float(outputs[0][class_id])
+
+        return create_success_prediction(
+            image_path.name,
+            class_id,
+            confidence
+        )
 
     except Exception as e:
         logger.error(f"Failed to make prediction: {e}")
-        return create_error_prediction(image_path.name, "Failed to make prediction")
+        return create_error_prediction(image_path.name, f"Failed to make prediction: {str(e)}")
 
 
 def process_directory(
-    directory: Union[str, Path], model: DefectDetectionModel
+    directory: Union[str, Path], model
 ) -> List[PredictionResult]:
     """Process all images in a directory.
 
@@ -210,18 +210,18 @@ def process_directory(
 
         # Preprocess and predict
         try:
-            with torch.no_grad():
-                inputs = preprocess_image(image)
-                outputs = model(inputs)
-                probabilities = torch.softmax(outputs, dim=1)
-                confidence, predicted = torch.max(probabilities, dim=1)
+            inputs = preprocess_image(image)
+            outputs = model(inputs)
+            probabilities = np.exp(outputs[0]) / np.sum(np.exp(outputs[0]))
+            confidence = float(np.max(probabilities))
+            predicted = int(np.argmax(probabilities))
 
-                result = PredictionResult(
-                    filename=image_path.name,
-                    class_id=int(predicted.item()),
-                    confidence=float(confidence.item()),
-                )
-                results.append(result)
+            result = PredictionResult(
+                filename=image_path.name,
+                class_id=predicted,
+                confidence=confidence,
+            )
+            results.append(result)
 
         except Exception as e:
             logger.error(f"Failed to make prediction: {e}")
@@ -260,7 +260,7 @@ def main() -> None:
     input_path = Path(args.input)
     if input_path.is_file():
         # Single image prediction
-        result = predict_single_image(input_path, args.model)
+        result = predict_single_image(input_path)
         print(json.dumps(result, indent=4))
         if args.output:
             with open(args.output, "w") as f:
@@ -268,8 +268,7 @@ def main() -> None:
     else:
         # Directory processing
         try:
-            model = DefectDetectionModel.load_from_checkpoint(args.model)
-            model.eval()
+            model = DefectDetectionModel.load_from_checkpoint(config.model_path)
             results = process_directory(input_path, model)
             if args.output:
                 save_results(results, args.output)
